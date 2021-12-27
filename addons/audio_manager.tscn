@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://addons/audio_manager.gd" type="Script" id=1]
+
+[node name="AudioManager" type="Node"]
+script = ExtResource( 1 )
+_audio_bus_default_file_path = "res://resources/audio_bus_default.tres"
+
+[node name="Sound" type="Node" parent="."]
+
+[node name="Sound2D" type="Node" parent="."]
+
+[node name="Sound3D" type="Node" parent="."]
+
+[node name="Music" type="Node" parent="."]
