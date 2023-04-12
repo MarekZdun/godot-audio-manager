@@ -1,4 +1,75 @@
 extends Node
+"""
+Description here
+(c) Pioneer Games
+v 1.0
+
+Usage:
+-choose audio bus .tres file in AudioManager Inspector
+
+-choose sound directory path in AudioManager Inspector
+
+-choose music directory path in AudioManager Inspector
+
+-put your audiofiles in sound/music folders
+
+-set the number of audio channels (maximum simultaneous streams) Ex:
+	AudioManager.sound_channel_count = 8
+	AudioManager.sound_2d_channel_count = 4
+	AudioManager.sound_3d_channel_count = 4
+	AudioManager.music_channel_count = 2
+	
+-call load_sounds(audio_names: Array) / load_sounds(audio_names: Array) to load only needed audio streams Ex:
+	var sounds = [
+		"blip",
+		"confirmation",
+		"laser"
+	]
+	
+	var music = [
+		"bgm",
+		"bgm2"
+	]
+	
+	AudioManager.load_sounds(sounds)
+	AudioManager.load_music(music)
+	
+to get rid of preloaded audio streams and free memory, call void unload_sound(audio_name: String) / 
+		void unload_music(audio_name: String) / void unload_all_sounds() / void unload_all_music() Ex:
+	AudioManager.unload_all_sounds()
+	AudioManager.unload_all_music()
+	
+-to play audio stream sound, call Node play_sound(stream: AudioStream, sound_type: int, parent: Node = null, 
+		priority: int = 0, volume_db: float = 0.0, pitch_scale: float = 1.0) Ex:
+	stream_player = AudioManager.play_sound(load("res://assets/sound/blip.wav"), AudioManager.SoundType.NON_POSITIONAL, null, 0, 1, 1)
+	stream_player = AudioManager.play_sound(load("res://assets/sound/blip.wav"), AudioManager.SoundType.POSITIONAL_2D, object_1, 0, 1, 1)
+	stream_player = AudioManager.play_sound(load("res://assets/sound/blip.wav"), AudioManager.SoundType.POSITIONAL_3D, object_1, 0, 2, 1)
+	
+-to play preloaded audio stream sound, call Node play_loaded_sound(stream_name: String, sound_type: int, parent: Node = null, 
+		priority: int = 0, volume_db: float = 0.0, pitch_scale: float = 1.0) Ex:
+	stream_player = AudioManager.play_loaded_sound("blip", AudioManager.SoundType.NON_POSITIONAL, null, 0, 1, 1)
+	stream_player = AudioManager.play_loaded_sound("blip", AudioManager.SoundType.POSITIONAL_2D, object_1, 0, 1, 1)
+	stream_player = AudioManager.play_loaded_sound("blip", AudioManager.SoundType.POSITIONAL_3D, object_1, 0, 1, 1)
+	
+-to play audio stream music, call AudioStreamPlayer play_music(stream: AudioStream, volume_db: float = 0.0, pitch_scale: float = 1.0,
+		transition_in_duration: float = 0) Ex:
+	music_player = AudioManager.play_music(load("res://assets/music/bgm.ogg", 1, 1, 3)
+	
+-to play preloaded audio stream music, call AudioStreamPlayer play_loaded_music(stream_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0,
+		transition_in_duration: float = 0) Ex:
+	music_player = AudioManager.play_loaded_music("bgm", 1, 1, 3)
+	
+-to stop sound, call stop_sound(stream_player: Node) Ex:
+	AudioManager.stop_sound(stream_player)
+	
+-to stop music, call stop_music(stream_player: Node, transition_out_duration: float = 0) Ex:
+	AudioManager.stop_music(music_player, 3)
+	
+-you can set audio buses, Ex:
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Sound"), linear2db(1))
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), linear2db(1))
+	AudioServer.set_bus_mute(AudioServer.get_bus_index("Sound"), true)
+"""
 
 
 enum AudioType {
@@ -16,12 +87,12 @@ export(String, FILE, "*.tres") var _audio_bus_default_file_path: String = "res::
 export(String, DIR) var sound_dir: String = "res://assets/sound"
 export(String, DIR) var music_dir: String = "res://assets/music"
 
-var sound_channel_count: int = 0 setget set_sound_channel_count
+var sound_channel_count: int = 0 setget set_sound_channel_count	# should be exported variable???
 var sound_2d_channel_count: int = 0 setget set_sound_2d_channel_count
 var sound_3d_channel_count: int = 0 setget set_sound_3d_channel_count
 var music_channel_count: int = 0 setget set_music_channel_count
 
-var sound_priorities: Dictionary
+var sound_priorities: Dictionary	# should be private variable, with _ prefix???
 var sound_2d_priorities: Dictionary
 var sound_3d_priorities: Dictionary
 
@@ -47,7 +118,7 @@ onready var music_root: Node = get_node("Music")
 
 
 func _ready():
-	AudioServer.set_bus_layout(load(_audio_bus_default_file_path))
+	AudioServer.set_bus_layout(load(_audio_bus_default_file_path))	# check if path is valid and if load was successful
  
 	set_sound_channel_count(sound_channel_count)
 	set_sound_2d_channel_count(sound_2d_channel_count)
@@ -412,16 +483,16 @@ func _get_filenames(path) -> Array:
 	var dir = Directory.new()
 	if dir.open(path) == OK:
 		dir.list_dir_begin(true, true)
-		var filename = dir.get_next()
-		while not filename.empty():
+		var file_name = dir.get_next()
+		while not file_name.empty():
 			if dir.current_is_dir():
 				push_error("No directories in audio folder.")
-			elif filename.ends_with(".wav") or filename.ends_with(".ogg"):
-				files.append(filename)
-			filename = dir.get_next()
+			elif file_name.ends_with(".import"):
+				files.append(file_name.replace(".import",""))
+			file_name = dir.get_next()
 	else:
 		push_error("An error occurred when trying to access '" + path + "'.")
-		
+	
 	return files
 	
 	
@@ -462,6 +533,7 @@ func _check_priority_and_find_oldest(stream_players: Dictionary, priorities: Dic
 			
 	if lowest_priority_id_list.empty():
 		return null
+
 	var oldest_stream_player = stream_players[lowest_priority_id_list.front()]
 	for id in range(1, lowest_priority_id_list.size()):
 		var stream_player = stream_players[lowest_priority_id_list[id]]

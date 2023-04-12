@@ -4,3 +4,40 @@
 
 [node name="Main" type="Node2D"]
 script = ExtResource( 1 )
+__meta__ = {
+"_edit_horizontal_guides_": [ 552.0 ]
+}
+
+[node name="Button" type="Button" parent="."]
+margin_left = 78.0
+margin_top = 529.0
+margin_right = 150.0
+margin_bottom = 549.0
+text = "SOUND 1"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Button2" type="Button" parent="."]
+margin_left = 491.0
+margin_top = 529.0
+margin_right = 563.0
+margin_bottom = 549.0
+text = "SOUND 1"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Button3" type="Button" parent="."]
+margin_left = 880.0
+margin_top = 529.0
+margin_right = 952.0
+margin_bottom = 549.0
+text = "SOUND 1"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[connection signal="button_down" from="Button" to="." method="_on_Button_button_down"]
+[connection signal="button_down" from="Button2" to="." method="_on_Button2_button_down"]
+[connection signal="button_down" from="Button3" to="." method="_on_Button3_button_down"]

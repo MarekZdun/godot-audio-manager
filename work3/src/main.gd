@@ -19,13 +19,13 @@ func _ready():
 		"rain"
 	]
 	
-	AudioManager.load_sounds(sounds)
-	AudioManager.load_music(music)
+#	AudioManager.load_sounds(sounds)
+#	AudioManager.load_music(music)
 
-	AudioManager.sound_3d_channel_count = 4
+	AudioManager.sound_3d_channel_count = 2
 	AudioManager.music_channel_count = 2
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Sound3D"), linear2db(1))
-	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), linear2db(0.05))
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), linear2db(0.5))
 	
 	var scene_3d = load("res://work3/src/scene_3d.tscn").instance()
 	add_child(scene_3d)
@@ -34,10 +34,10 @@ func _ready():
 	object_2 = scene_3d.get_node("Object2")
 	object_3 = scene_3d.get_node("Object3")
 	
-	var music_player = AudioManager.play_loaded_music("bgm", 1, 1, 3)
-	yield(get_tree().create_timer(10), "timeout")
-	AudioManager.stop_music(music_player, 3)
-	music_player = AudioManager.play_loaded_music("rain", 1, 1, 3)
+#	var music_player = AudioManager.play_loaded_music("bgm", 1, 1, 3)
+#	yield(get_tree().create_timer(10), "timeout")
+#	AudioManager.stop_music(music_player, 3)
+#	music_player = AudioManager.play_loaded_music("rain", 1, 1, 3)
 
 #	var music_player = AudioManager.play_loaded_music("bgm", 1, 1, 3)
 #	yield(get_tree().create_timer(1), "timeout")
@@ -49,17 +49,18 @@ func _ready():
 func _input(event):
     if event is InputEventKey:
         if event.pressed and event.scancode == KEY_1:
-#            AudioManager.play_sound(load("res://assets/sound/blip.wav"), AudioManager.SoundType.POSITIONAL_3D, object_1, 0, 2, 1)
-            stream_player = AudioManager.play_loaded_sound("blip", AudioManager.SoundType.POSITIONAL_3D, object_1, 0, 1, 1)
-#            stream_player.unit_size = 1
+            AudioManager.play_sound(load("res://assets/sound/blip.wav"), AudioManager.SoundType.POSITIONAL_3D, object_1, 0, 2, 1)
+#            stream_player = AudioManager.play_loaded_sound("confirmation", AudioManager.SoundType.POSITIONAL_3D, object_1, 0, 1, 1)
+#            stream_player.attenuation_filter_db = 0
+#            stream_player.unit_size = 10
 
         elif event.pressed and event.scancode == KEY_2:
-#            AudioManager.play_sound(load("res://assets/sound/confirmation.ogg"), AudioManager.SoundType.POSITIONAL_3D, object_2, 0, 2, 1)
-            stream_player = AudioManager.play_loaded_sound("confirmation", AudioManager.SoundType.POSITIONAL_3D, object_2, 0, 1, 1)
+            AudioManager.play_sound(load("res://assets/sound/confirmation.ogg"), AudioManager.SoundType.POSITIONAL_3D, object_2, 0, 2, 1)
+#            stream_player = AudioManager.play_loaded_sound("blip", AudioManager.SoundType.POSITIONAL_3D, object_2, 0, 1, 1)
 
         elif event.pressed and event.scancode == KEY_3:
-#            AudioManager.play_sound(load("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, object_3, 0, 2, 1)
-            stream_player = AudioManager.play_loaded_sound("laser", AudioManager.SoundType.POSITIONAL_3D, object_3, 0, 1, 1)
+            AudioManager.play_sound(load("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, object_3, 0, 2, 1)
+#            stream_player = AudioManager.play_loaded_sound("laser", AudioManager.SoundType.POSITIONAL_3D, object_3, 0, 1, 1)
 
         elif event.pressed and event.scancode == KEY_SPACE:
             if stream_player and stream_player.playing:

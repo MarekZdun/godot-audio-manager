@@ -1,13 +1,14 @@
 [remap]
 
 importer="wav"
-type="AudioStreamSample"
-path="res://.import/fanfare.wav-ad4fe79255a94e2672fe61ff6318b5e8.sample"
+type="AudioStreamWAV"
+uid="uid://cgop2q3ba4lmu"
+path="res://.godot/imported/fanfare.wav-ad4fe79255a94e2672fe61ff6318b5e8.sample"
 
 [deps]
 
 source_file="res://assets/sound/fanfare.wav"
-dest_files=[ "res://.import/fanfare.wav-ad4fe79255a94e2672fe61ff6318b5e8.sample" ]
+dest_files=["res://.godot/imported/fanfare.wav-ad4fe79255a94e2672fe61ff6318b5e8.sample"]
 
 [params]
 
@@ -17,5 +18,7 @@ force/max_rate=false
 force/max_rate_hz=44100
 edit/trim=false
 edit/normalize=false
-edit/loop=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
 compress/mode=0

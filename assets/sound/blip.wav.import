@@ -1,13 +1,14 @@
 [remap]
 
 importer="wav"
-type="AudioStreamSample"
-path="res://.import/blip.wav-2d8477f53a8b9dd42939ee564f8e3ff0.sample"
+type="AudioStreamWAV"
+uid="uid://dsvqcer6rnqgu"
+path="res://.godot/imported/blip.wav-2d8477f53a8b9dd42939ee564f8e3ff0.sample"
 
 [deps]
 
 source_file="res://assets/sound/blip.wav"
-dest_files=[ "res://.import/blip.wav-2d8477f53a8b9dd42939ee564f8e3ff0.sample" ]
+dest_files=["res://.godot/imported/blip.wav-2d8477f53a8b9dd42939ee564f8e3ff0.sample"]
 
 [params]
 
@@ -17,5 +18,7 @@ force/max_rate=false
 force/max_rate_hz=44100
 edit/trim=false
 edit/normalize=false
-edit/loop=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
 compress/mode=0
