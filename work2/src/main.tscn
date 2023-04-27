@@ -1,43 +1,57 @@
-[gd_scene load_steps=2 format=2]
+[gd_scene load_steps=6 format=3 uid="uid://doqoci6uba66"]
 
-[ext_resource path="res://work2/src/main.gd" type="Script" id=1]
+[ext_resource type="Script" path="res://work2/src/main.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://bb6t16q1fsrk6" path="res://icon.png" id="2_stenj"]
 
-[node name="Main" type="Node2D"]
-script = ExtResource( 1 )
-__meta__ = {
-"_edit_horizontal_guides_": [ 552.0 ]
-}
+[sub_resource type="SystemFont" id="SystemFont_fvagn"]
 
-[node name="Button" type="Button" parent="."]
-margin_left = 78.0
-margin_top = 529.0
-margin_right = 150.0
-margin_bottom = 549.0
-text = "SOUND 1"
-__meta__ = {
-"_edit_use_anchors_": false
-}
+[sub_resource type="LabelSettings" id="LabelSettings_jaco8"]
+font = SubResource("SystemFont_fvagn")
+font_size = 26
 
-[node name="Button2" type="Button" parent="."]
-margin_left = 491.0
-margin_top = 529.0
-margin_right = 563.0
-margin_bottom = 549.0
-text = "SOUND 1"
-__meta__ = {
-"_edit_use_anchors_": false
-}
+[sub_resource type="LabelSettings" id="LabelSettings_vey16"]
+font_size = 22
 
-[node name="Button3" type="Button" parent="."]
-margin_left = 880.0
-margin_top = 529.0
-margin_right = 952.0
-margin_bottom = 549.0
-text = "SOUND 1"
-__meta__ = {
-"_edit_use_anchors_": false
-}
+[node name="Main" type="Node"]
+script = ExtResource("1")
 
-[connection signal="button_down" from="Button" to="." method="_on_Button_button_down"]
-[connection signal="button_down" from="Button2" to="." method="_on_Button2_button_down"]
-[connection signal="button_down" from="Button3" to="." method="_on_Button3_button_down"]
+[node name="Actor1" type="Sprite2D" parent="."]
+position = Vector2(-755, 258)
+texture = ExtResource("2_stenj")
+
+[node name="Actor2" type="Sprite2D" parent="."]
+position = Vector2(576, 309)
+texture = ExtResource("2_stenj")
+
+[node name="Actor3" type="Sprite2D" parent="."]
+position = Vector2(2029, 245)
+texture = ExtResource("2_stenj")
+
+[node name="Info" type="Label" parent="."]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -315.0
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_vertical = 8
+text = "press 1 to play sound number one, press shit+1 to stop sound number one
+press 2 to play sound number two, press shift+2 to stop sound number two
+press 3 to play sound number three, press shift+3 to stop sound number three
+press SPACE to turn musci on/off
+press ARROW UP/ARROW DOWN to increase/decrease sound channel count
+press ESCAPE to unload all sounds and musics"
+label_settings = SubResource("LabelSettings_jaco8")
+horizontal_alignment = 1
+vertical_alignment = 2
+
+[node name="Sound2dChannelCountLabel" type="Label" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -294.0
+offset_bottom = 46.0
+grow_horizontal = 0
+text = "sound 2d channel count:"
+label_settings = SubResource("LabelSettings_vey16")
