@@ -44,7 +44,7 @@ press 2 to play sound number two, press shift+2 to stop sound number two
 press 3 to play sound number three, press shift+3 to stop sound number three
 press SPACE to turn musci on/off
 press ARROW UP/ARROW DOWN to increase/decrease sound channel count
-press ESCAPE to unload all sounds and musics"
+press ESCAPE to destroy all actors"
 label_settings = SubResource("LabelSettings_tcx4a")
 horizontal_alignment = 1
 vertical_alignment = 2
