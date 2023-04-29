@@ -43,6 +43,147 @@ func _ready():
 #	await get_tree().create_timer(5).timeout
 #	AudioManager.music_channel_count = 0
 
+	# Sound3d test 1
+#	AudioManager.sound_3d_channel_count = 1
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(5).timeout
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(5).timeout
+
+	# Sound3d test 2
+#	AudioManager.sound_3d_channel_count = 1
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(5).timeout
+
+	# Sound3d test 3
+#	AudioManager.sound_3d_channel_count = 1
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_3)
+#	await get_tree().create_timer(5).timeout
+
+	# Sound3d test 4
+#	AudioManager.sound_3d_channel_count = 2
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(5).timeout
+	
+	# Sound3d test 5
+#	AudioManager.sound_3d_channel_count = 2
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_3)
+#	await get_tree().create_timer(5).timeout
+	
+	# Sound3d test 6
+#	AudioManager.sound_3d_channel_count = 1
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	AudioManager.stop_sound(_sound_stream_player_1)
+#	await get_tree().create_timer(5).timeout
+
+	# Sound3d test 7
+#	AudioManager.sound_3d_channel_count = 2
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	_sound_stream_player_2 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	AudioManager.stop_sound(_sound_stream_player_1)
+#	AudioManager.stop_sound(_sound_stream_player_2)
+#	await get_tree().create_timer(5).timeout
+	
+	# Sound3d test 8
+#	AudioManager.sound_3d_channel_count = 2
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	_sound_stream_player_2 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_3)
+#	await get_tree().create_timer(0.25).timeout
+#	AudioManager.stop_sound(_sound_stream_player_1)
+#	AudioManager.stop_sound(_sound_stream_player_2)
+#	await get_tree().create_timer(5).timeout
+	
+	# Sound3d test 9
+#	AudioManager.sound_3d_channel_count = 1
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	AudioManager.sound_3d_channel_count = 0
+#	await get_tree().create_timer(5).timeout
+
+	# Sound3d test 10
+#	AudioManager.sound_3d_channel_count = 2
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	_sound_stream_player_2 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	AudioManager.sound_3d_channel_count = 1
+#	await get_tree().create_timer(5).timeout
+	
+	# Sound3d test 11
+#	AudioManager.sound_3d_channel_count = 2
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	_sound_stream_player_2 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	AudioManager.sound_3d_channel_count = 0
+#	await get_tree().create_timer(5).timeout
+
+	# Sound3d test 12
+#	AudioManager.sound_3d_channel_count = 2
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	_sound_stream_player_2 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_3)
+#	await get_tree().create_timer(0.25).timeout
+#	AudioManager.sound_3d_channel_count = 1
+#	await get_tree().create_timer(5).timeout
+	
+	# Sound3d test 13
+#	AudioManager.sound_3d_channel_count = 2
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	_sound_stream_player_2 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_3)
+#	await get_tree().create_timer(0.25).timeout
+#	AudioManager.sound_3d_channel_count = 0
+#	await get_tree().create_timer(5).timeout
+
+	# Sound3d test 14
+#	AudioManager.sound_3d_channel_count = 1
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	actor_1.queue_free()
+#	await get_tree().create_timer(5).timeout
+
+	# Sound3d test 15
+#	AudioManager.sound_3d_channel_count = 2
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	_sound_stream_player_2 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	actor_1.queue_free()
+#	await get_tree().create_timer(5).timeout
+
+	# Sound3d test 16
+#	AudioManager.sound_3d_channel_count = 2
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	_sound_stream_player_2 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_3)
+#	await get_tree().create_timer(0.25).timeout
+#	actor_1.queue_free()
+#	await get_tree().create_timer(5).timeout
+	
+	# Sound3d test 17
+#	AudioManager.sound_3d_channel_count = 2
+#	_sound_stream_player_1 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_1)
+#	await get_tree().create_timer(0.25).timeout
+#	_sound_stream_player_2 = AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_3)
+#	await get_tree().create_timer(0.25).timeout
+#	actor_1.queue_free()
+#	actor_3.queue_free()
+#	await get_tree().create_timer(5).timeout
+
+
 func _process(delta):
 	sound_3d_channel_count_label.text = "sound 3d channel count: %s" % AudioManager.sound_3d_channel_count
 	
