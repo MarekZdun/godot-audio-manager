@@ -1,12 +1,9 @@
 @tool
 extends Node
 
-## A brief description of your script.
-##
-## A more detailed description of the script.
-##
-## @tutorial:            http://the/tutorial1/url.com
-## @tutorial(Tutorial2): http://the/tutorial2/url.com
+## Audio Manager allows you to set a pool of audio stream players associated with playing non-positioned sounds,
+## 2D sounds, 3D sounds and music sounds, and then use these audio stream players when there is a need to play a specific sound.
+## In this way, the user obtains the possibility of reusing audio stream players.
 
 enum AudioType {
 	SOUND,
