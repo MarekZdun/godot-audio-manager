@@ -81,7 +81,6 @@ var _music_filenames: Array
 var _loaded_sound_streams: Dictionary
 var _loaded_music_streams: Dictionary
 
-var _stream_players_connection_finished: Dictionary
 var _stream_players_tween_volume_transition: Dictionary
 var _playing_nodes_id_access_sound_2d_stream_players: Dictionary
 var _playing_nodes_id_access_sound_3d_stream_players: Dictionary
@@ -153,9 +152,6 @@ func play_sound(stream: AudioStream, sound_type: int, parent: Node = null,
 				stream_player = _check_priority_and_find_oldest(_sound_stream_players, _sound_stream_players_priorities, priority)
 			
 			if stream_player:	
-				_remove_connection_finished(stream_player)
-				stream_player.finished.connect(_on_sound_stream_player_finished.bind(stream_player))
-				_stream_players_connection_finished[stream_player.get_instance_id()] = _on_sound_stream_player_finished
 				_sound_stream_players_priorities[stream_player.get_instance_id()] = priority
 			
 		SoundType.POSITIONAL_2D:
@@ -179,9 +175,6 @@ func play_sound(stream: AudioStream, sound_type: int, parent: Node = null,
 					if not parent.tree_exiting.is_connected(_on_playing_node_with_sound_2d_stream_players_exiting_tree):
 						parent.tree_exiting.connect(_on_playing_node_with_sound_2d_stream_players_exiting_tree.bind(parent), CONNECT_ONE_SHOT)
 
-				_remove_connection_finished(stream_player)
-				stream_player.finished.connect(_on_sound_2d_stream_player_finished.bind(stream_player))
-				_stream_players_connection_finished[stream_player.get_instance_id()] = _on_sound_2d_stream_player_finished
 				_sound_2d_stream_players_priorities[stream_player.get_instance_id()] = priority
 			
 		SoundType.POSITIONAL_3D:
@@ -205,13 +198,9 @@ func play_sound(stream: AudioStream, sound_type: int, parent: Node = null,
 					if not parent.tree_exiting.is_connected(_on_playing_node_with_sound_3d_stream_players_exiting_tree):
 						parent.tree_exiting.connect(_on_playing_node_with_sound_3d_stream_players_exiting_tree.bind(parent), CONNECT_ONE_SHOT)
 
-				_remove_connection_finished(stream_player)
-				stream_player.finished.connect(_on_sound_3d_stream_player_finished.bind(stream_player))
-				_stream_players_connection_finished[stream_player.get_instance_id()] = _on_sound_3d_stream_player_finished
 				_sound_3d_stream_players_priorities[stream_player.get_instance_id()] = priority
 	
-	if stream_player:		
-		stream_player.bus = SOUND_BUS_NAME
+	if stream_player:	
 		stream_player.stream = stream
 		stream_player.volume_db = linear_to_db(volume_db)
 		stream_player.pitch_scale = pitch_scale
@@ -243,10 +232,6 @@ func play_music(stream: AudioStream, volume_db: float = 1.0, pitch_scale: float 
 		stream_player = _find_oldest(_music_stream_players)
 				
 	if stream_player:
-		_remove_connection_finished(stream_player)
-		stream_player.finished.connect(_on_music_stream_player_finished.bind(stream_player))
-		_stream_players_connection_finished[stream_player.get_instance_id()] = _on_music_stream_player_finished
-		stream_player.bus = MUSIC_BUS_NAME
 		stream_player.stream = stream
 		stream_player.pitch_scale = pitch_scale
 		
@@ -366,6 +351,8 @@ func _update_music_channels(count: int) -> void:
 	if count > music_stream_players_count:
 		for i in count - music_stream_players_count:
 			var stream_player := AudioStreamPlayer.new()
+			stream_player.bus = MUSIC_BUS_NAME
+			stream_player.finished.connect(_on_music_stream_player_finished.bind(stream_player))
 			music_root.add_child(stream_player)
 			_music_stream_players[stream_player.get_instance_id()] = stream_player
 			_available_music_stream_players.append(stream_player)
@@ -381,7 +368,6 @@ func _update_music_channels(count: int) -> void:
 			if stream_player:
 				var stream_player_id := stream_player.get_instance_id()
 				_remove_tween_volume_transition(stream_player)
-				_remove_connection_finished(stream_player)
 				_music_stream_players.erase(stream_player_id)
 				stream_player.queue_free()
 	
@@ -394,6 +380,8 @@ func _update_sound_channels(count: int) -> void:
 	if count > sound_stream_players_count:
 		for i in count - sound_stream_players_count:
 			var stream_player := AudioStreamPlayer.new()
+			stream_player.bus = SOUND_BUS_NAME
+			stream_player.finished.connect(_on_sound_stream_player_finished.bind(stream_player))
 			sound_root.add_child(stream_player)
 			_sound_stream_players[stream_player.get_instance_id()] = stream_player
 			_available_sound_stream_players.append(stream_player)
@@ -408,7 +396,6 @@ func _update_sound_channels(count: int) -> void:
 				
 			if stream_player:
 				var stream_player_id := stream_player.get_instance_id()
-				_remove_connection_finished(stream_player)
 				_sound_stream_players.erase(stream_player_id)
 				stream_player.queue_free()
 				
@@ -424,6 +411,8 @@ func _update_sound_2d_channels(count: int) -> void:
 	if count > sound_2d_stream_players_count:
 		for i in count - sound_2d_stream_players_count:
 			var stream_player := AudioStreamPlayer2D.new()
+			stream_player.bus = SOUND_BUS_NAME
+			stream_player.finished.connect(_on_sound_2d_stream_player_finished.bind(stream_player))
 			sound_2d_root.add_child(stream_player)
 			_sound_2d_stream_players[stream_player.get_instance_id()] = stream_player
 			_available_sound_2d_stream_players.append(stream_player)
@@ -439,7 +428,6 @@ func _update_sound_2d_channels(count: int) -> void:
 			if stream_player:
 				var stream_player_id := stream_player.get_instance_id()
 				_remove_connection_tree_exiting(stream_player)
-				_remove_connection_finished(stream_player)
 				_sound_2d_stream_players.erase(stream_player_id)
 				stream_player.queue_free()
 				
@@ -455,6 +443,8 @@ func _update_sound_3d_channels(count: int) -> void:
 	if count > sound_3d_stream_players_count:
 		for i in count - sound_3d_stream_players_count:
 			var stream_player := AudioStreamPlayer3D.new()
+			stream_player.bus = SOUND_BUS_NAME
+			stream_player.finished.connect(_on_sound_3d_stream_player_finished.bind(stream_player))
 			sound_3d_root.add_child(stream_player)
 			_sound_3d_stream_players[stream_player.get_instance_id()] = stream_player
 			_available_sound_3d_stream_players.append(stream_player)
@@ -470,7 +460,6 @@ func _update_sound_3d_channels(count: int) -> void:
 			if stream_player:
 				var stream_player_id := stream_player.get_instance_id()
 				_remove_connection_tree_exiting(stream_player)
-				_remove_connection_finished(stream_player)
 				_sound_3d_stream_players.erase(stream_player_id)
 				stream_player.queue_free()
 				
@@ -484,20 +473,6 @@ func _update_music_filenames(p_music_dir_path: String) -> void:
 	
 func _update_sound_filenames(p_sound_dir_path: String) -> void:
 	_sound_filenames = _get_filenames(p_sound_dir_path)
-
-			
-func _remove_connection_finished(stream_player: Node) -> bool:
-	var removed_connection := false
-	if is_instance_valid(stream_player):
-		var stream_player_id := stream_player.get_instance_id()
-		if _stream_players_connection_finished.has(stream_player_id):
-			var callback = _stream_players_connection_finished[stream_player_id] as Callable
-			if callback and stream_player.finished.is_connected(callback):
-				stream_player.finished.disconnect(callback)
-				removed_connection = true
-			_stream_players_connection_finished.erase(stream_player_id)
-				
-	return removed_connection
 	
 	
 func _remove_connection_tree_exiting(stream_player: Node) -> bool:
@@ -637,7 +612,6 @@ func _on_playing_node_with_sound_3d_stream_players_exiting_tree(node: Node) -> v
 			
 func _on_sound_stream_player_finished(stream_player):
 	if stream_player:
-		_remove_connection_finished(stream_player)
 		_sound_stream_players_priorities.erase(stream_player.get_instance_id())
 		_available_sound_stream_players.append(stream_player)
 	
@@ -647,7 +621,6 @@ func _on_sound_2d_stream_player_finished(stream_player):
 		_remove_connection_tree_exiting(stream_player)
 		stream_player.get_parent().remove_child(stream_player)
 		sound_2d_root.add_child(stream_player)
-		_remove_connection_finished(stream_player)
 		_sound_2d_stream_players_priorities.erase(stream_player.get_instance_id())
 		_available_sound_2d_stream_players.append(stream_player)
 	
@@ -657,12 +630,10 @@ func _on_sound_3d_stream_player_finished(stream_player):
 		_remove_connection_tree_exiting(stream_player)
 		stream_player.get_parent().remove_child(stream_player)
 		sound_3d_root.add_child(stream_player)
-		_remove_connection_finished(stream_player)
 		_sound_3d_stream_players_priorities.erase(stream_player.get_instance_id())
 		_available_sound_3d_stream_players.append(stream_player)
 	
 	
 func _on_music_stream_player_finished(stream_player):
 	if stream_player:
-		_remove_connection_finished(stream_player)
 		_available_music_stream_players.append(stream_player)

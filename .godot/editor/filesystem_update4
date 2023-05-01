@@ -1,7 +1,8 @@
 res://addons/audio_manager/audio_manager.tscn
 res://addons/audio_manager/audio_manager.gd
-res://work2/src/main.gd
 res://work/src/main.tscn
 res://work2/src/main.tscn
 res://work3/src/main.tscn
+res://work/src/main.gd
+res://work2/src/main.gd
 res://work3/src/main.gd
