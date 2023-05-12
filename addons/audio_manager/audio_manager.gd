@@ -1,9 +1,12 @@
 @tool
 extends Node
 
-## Audio Manager allows you to set a pool of audio stream players associated with playing non-positioned sounds,
-## 2D sounds, 3D sounds and music sounds, and then use these audio stream players when there is a need to play a specific sound.
-## In this way, the user obtains the possibility of reusing audio stream players.
+## The Audio Manager enables the user to configure a pool of AudioStreamPlayers associated with 
+## playing non-positional sounds, 2D sounds, 3D sounds, and music. When there is a need to play 
+## a specific AudioStream, Audio Manager retrieves a suitable AudioStreamPlayer from the pool and 
+## plays the requested AudioStream on it. Once the AudioStream playback is completed, 
+## the AudioStreamPlayer is automatically returned to the pool. This allows the user to reuse 
+## AudioStreamPlayers and avoid an excessive number of AudioStreamPlayers on the scene.
 
 enum AudioType {
 	SOUND,
@@ -16,6 +19,12 @@ enum SoundType {
 	POSITIONAL_3D
 }
 
+const DEFAULT_PITCH_SCALE: float = 1.0
+const DEFAULT_VOLUME_DB: float = 1.0
+const MIN_VOLUME_DB: float = -80.0
+const DEFAULT_SOUND_PRIORITY: int = 0
+const DEFAULT_VOLUME_FADE_IN_DURATION: float = 0.0
+const DEFAULT_VOLUME_FADE_OUT_DURATION: float = 0.0
 const MUSIC_BUS_NAME: String = "Music"
 const SOUND_BUS_NAME: String = "Sound"
 const MUSIC_CHANNEL_COUNT_MAX: int = 64
@@ -125,7 +134,8 @@ func unload_music(audio_name: String) -> void:
 	
 	
 func play_loaded_sound(stream_name: String, sound_type: int, parent: Node = null, 
-		priority: int = 0, volume_db: float = 1.0, pitch_scale: float = 1.0) -> Node:
+		priority: int = DEFAULT_SOUND_PRIORITY, volume_db: float = DEFAULT_VOLUME_DB, 
+		pitch_scale: float = DEFAULT_PITCH_SCALE) -> Node:
 	var stream: AudioStream
 	if _loaded_sound_streams.has(stream_name):
 		stream = _loaded_sound_streams[stream_name]
@@ -136,7 +146,8 @@ func play_loaded_sound(stream_name: String, sound_type: int, parent: Node = null
 	
 	
 func play_sound(stream: AudioStream, sound_type: int, parent: Node = null, 
-		priority: int = 0, volume_db: float = 1.0, pitch_scale: float = 1.0) -> Node:
+		priority: int = DEFAULT_SOUND_PRIORITY, volume_db: float = DEFAULT_VOLUME_DB, 
+		pitch_scale: float = DEFAULT_PITCH_SCALE) -> Node:
 	if stream == null:
 		return
 			
@@ -206,8 +217,8 @@ func play_sound(stream: AudioStream, sound_type: int, parent: Node = null,
 	return stream_player
 	
 
-func play_loaded_music(stream_name: String, volume_db: float = 1.0, pitch_scale: float = 1.0,
-		volume_transition_in_duration: float = 0) -> AudioStreamPlayer:
+func play_loaded_music(stream_name: String, volume_db: float = DEFAULT_VOLUME_DB, pitch_scale: float = DEFAULT_PITCH_SCALE,
+		volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION) -> AudioStreamPlayer:
 	var stream: AudioStream
 	if _loaded_music_streams.has(stream_name):
 		stream = _loaded_music_streams[stream_name]
@@ -217,8 +228,8 @@ func play_loaded_music(stream_name: String, volume_db: float = 1.0, pitch_scale:
 	return play_music(stream, volume_db, pitch_scale, volume_transition_in_duration)
 
 	
-func play_music(stream: AudioStream, volume_db: float = 1.0, pitch_scale: float = 1.0,
-		volume_transition_in_duration: float = 0) -> AudioStreamPlayer:
+func play_music(stream: AudioStream, volume_db: float = DEFAULT_VOLUME_DB, pitch_scale: float = DEFAULT_PITCH_SCALE,
+		volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION) -> AudioStreamPlayer:
 	if stream == null:
 		return
 			
@@ -234,7 +245,7 @@ func play_music(stream: AudioStream, volume_db: float = 1.0, pitch_scale: float 
 		
 		_remove_tween_volume_transition(stream_player)
 		if volume_transition_in_duration > 0:
-			stream_player.volume_db = linear_to_db(-50)
+			stream_player.volume_db = linear_to_db(MIN_VOLUME_DB)
 			create_volume_transition_in(stream_player, volume_db, volume_transition_in_duration)
 		else:
 			stream_player.volume_db = linear_to_db(volume_db)
@@ -256,7 +267,7 @@ func stop_sound(stream_player: Node) -> void:
 			_stop_sound_3d_stream_player(stream_player)
 	
 
-func stop_music(stream_player: Node, volume_transition_out_duration: float = 0) -> void:
+func stop_music(stream_player: Node, volume_transition_out_duration: float = DEFAULT_VOLUME_FADE_OUT_DURATION) -> void:
 	_remove_tween_volume_transition(stream_player)
 	if volume_transition_out_duration > 0:
 		var tween = create_volume_transition_out(stream_player, volume_transition_out_duration)
@@ -267,7 +278,7 @@ func stop_music(stream_player: Node, volume_transition_out_duration: float = 0) 
 	
 func create_volume_transition_in(stream_player: Node, volume_db: float, duration: float) -> Tween:
 	var tween := stream_player.create_tween()
-	tween.tween_property(stream_player, "volume_db", linear_to_db(volume_db), duration).from(-50.0)
+	tween.tween_property(stream_player, "volume_db", linear_to_db(volume_db), duration).from(MIN_VOLUME_DB)
 	tween.finished.connect(_remove_tween_volume_transition.bind(stream_player))
 	_stream_players_tween_volume_transition[stream_player.get_instance_id()] = tween
 	
@@ -276,7 +287,7 @@ func create_volume_transition_in(stream_player: Node, volume_db: float, duration
 	
 func create_volume_transition_out(stream_player: Node, duration: float) -> Tween:
 	var tween := stream_player.create_tween()
-	tween.tween_property(stream_player, "volume_db", -50.0, duration)
+	tween.tween_property(stream_player, "volume_db", MIN_VOLUME_DB, duration)
 	tween.finished.connect(_remove_tween_volume_transition.bind(stream_player))
 	_stream_players_tween_volume_transition[stream_player.get_instance_id()] = tween
 	
