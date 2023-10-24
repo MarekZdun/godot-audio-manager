@@ -434,7 +434,7 @@ func _load_from_files(audio_type: int, audio_names: Array) -> Dictionary:
 	return loaded
 	
 	
-func _get_filename(audio_type: int, audio_name: String) -> Array:
+func _get_filename(audio_type: int, audio_name: String) -> String:
 	var file_name = ""
 	var files = []
 	

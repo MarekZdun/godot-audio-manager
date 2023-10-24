@@ -10,7 +10,7 @@ func _ready():
 	
 	var music = [
 		"bgm",
-		"bgm2"
+		"rain"
 	]
 	
 	AudioManager.load_sounds(sounds)

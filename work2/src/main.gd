@@ -15,13 +15,14 @@ func _ready():
 	
 	var music = [
 		"bgm",
-		"bgm2"
+		"rain"
 	]
 	
 	AudioManager.load_sounds(sounds)
 	AudioManager.load_music(music)
 
 	AudioManager.sound_2d_channel_count = 4
+	AudioManager.music_channel_count = 2
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Sound2D"), linear2db(1))
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), linear2db(1))
 	

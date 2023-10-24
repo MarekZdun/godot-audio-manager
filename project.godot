@@ -15,7 +15,11 @@ config/icon="res://icon.png"
 
 [autoload]
 
-AudioManager="*res://addons/audio_manager.tscn"
+AudioManager="*res://addons/audio_manager/audio_manager.tscn"
+
+[editor_plugins]
+
+enabled=PoolStringArray( "res://addons/audio_manager/plugin.cfg" )
 
 [physics]
 
