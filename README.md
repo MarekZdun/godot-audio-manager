@@ -1,6 +1,6 @@
 # Audio Manager(Godot 4.1 version)
 
-An Audio Manager for [Godot Engine](https://godotengine.org/)
+An Audio Manager for [Godot Engine](https://godotengine.org/).<br />
 Looking for a Godot 3.5 version? [See godot4 branch](https://github.com/MarekZdun/godot-audio-manager/tree/3.5)
 
 ## 📄 Features
