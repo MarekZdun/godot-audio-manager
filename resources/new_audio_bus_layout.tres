@@ -1,0 +1,53 @@
+[gd_resource type="AudioBusLayout" load_steps=3 format=3 uid="uid://cjmvu4uw1ofp2"]
+
+[sub_resource type="AudioEffectLowPassFilter" id="AudioEffectLowPassFilter_lwu70"]
+resource_name = "LowPassFilter"
+
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_moscw"]
+resource_name = "Reverb"
+
+[resource]
+bus/1/name = &"Music"
+bus/1/solo = false
+bus/1/mute = false
+bus/1/bypass_fx = false
+bus/1/volume_db = 0.0
+bus/1/send = &"Master"
+bus/2/name = &"Sound"
+bus/2/solo = false
+bus/2/mute = false
+bus/2/bypass_fx = false
+bus/2/volume_db = 0.0
+bus/2/send = &"Master"
+bus/3/name = &"MusicMuffle"
+bus/3/solo = false
+bus/3/mute = false
+bus/3/bypass_fx = false
+bus/3/volume_db = 0.0
+bus/3/send = &"Music"
+bus/3/effect/0/effect = SubResource("AudioEffectLowPassFilter_lwu70")
+bus/3/effect/0/enabled = true
+bus/4/name = &"MusicReverb"
+bus/4/solo = false
+bus/4/mute = false
+bus/4/bypass_fx = false
+bus/4/volume_db = 0.0
+bus/4/send = &"MusicMuffle"
+bus/4/effect/0/effect = SubResource("AudioEffectReverb_moscw")
+bus/4/effect/0/enabled = true
+bus/5/name = &"SoundMuffle"
+bus/5/solo = false
+bus/5/mute = false
+bus/5/bypass_fx = false
+bus/5/volume_db = 0.0
+bus/5/send = &"Sound"
+bus/5/effect/0/effect = SubResource("AudioEffectLowPassFilter_lwu70")
+bus/5/effect/0/enabled = true
+bus/6/name = &"SoundReverb"
+bus/6/solo = false
+bus/6/mute = false
+bus/6/bypass_fx = false
+bus/6/volume_db = 0.0
+bus/6/send = &"SoundMuffle"
+bus/6/effect/0/effect = SubResource("AudioEffectReverb_moscw")
+bus/6/effect/0/enabled = true

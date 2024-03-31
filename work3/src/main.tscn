@@ -14,16 +14,20 @@ font_size = 26
 font_size = 22
 
 [node name="Main" type="Node"]
+process_mode = 3
 script = ExtResource("1")
 
 [node name="Actor1" type="MeshInstance3D" parent="."]
+process_mode = 1
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0, 0)
 mesh = SubResource("BoxMesh_50cve")
 
 [node name="Actor2" type="MeshInstance3D" parent="."]
+process_mode = 1
 mesh = SubResource("BoxMesh_50cve")
 
 [node name="Actor3" type="MeshInstance3D" parent="."]
+process_mode = 1
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, 0)
 mesh = SubResource("BoxMesh_50cve")
 
@@ -44,7 +48,8 @@ press 2 to play sound number two, press shift+2 to stop sound number two
 press 3 to play sound number three, press shift+3 to stop sound number three
 press SPACE to turn musci on/off
 press ARROW UP/ARROW DOWN to increase/decrease sound channel count
-press ESCAPE to destroy all actors"
+press P to pause scene
+press ESCAPE to unload all sounds and musics"
 label_settings = SubResource("LabelSettings_tcx4a")
 horizontal_alignment = 1
 vertical_alignment = 2

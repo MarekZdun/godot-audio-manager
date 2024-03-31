@@ -33,6 +33,34 @@ func _ready():
 #	await get_tree().create_timer(5).timeout
 #	AudioManager.music_channel_count = 0
 
+	# test; set the pause mode for AudioStreamPlayer while the sound stream is playing
+	#AudioManager.sound_channel_count = 1
+	#await get_tree().create_timer(2).timeout
+	#AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.NON_POSITIONAL, null,
+		#0, 1.0, 1.0, "", PROCESS_MODE_ALWAYS)
+	#await get_tree().create_timer(0.5).timeout
+	#pause_tree(true)
+	#await get_tree().create_timer(1).timeout
+	#pause_tree(false)
+	
+	# test; set the bus for AudioStreamPlayer while the sound stream is playing
+	#AudioManager.sound_channel_count = 1
+	#await get_tree().create_timer(2).timeout
+	#AudioServer.set_bus_bypass_effects(AudioServer.get_bus_index("SoundMuffle"), true)
+	#AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.NON_POSITIONAL, null,
+		#0, 1.0, 1.0, "SoundReverb")
+	#await get_tree().create_timer(3).timeout
+	#AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.NON_POSITIONAL, null,
+		#0, 1.0, 1.0)
+		
+	# test; set the pause mode and bus for AudioStreamPlayer while the music stream is playing
+	#AudioServer.set_bus_bypass_effects(AudioServer.get_bus_index("MusicMuffle"), true)
+	#AudioManager.play_music(preload("res://assets/music/bgm.ogg"), 1, 1, 2, "MusicReverb", PROCESS_MODE_PAUSABLE)
+	#await get_tree().create_timer(4).timeout
+	#pause_tree(true)
+	#await get_tree().create_timer(2).timeout
+	#pause_tree(false)
+
 
 func _process(delta):
 	sound_channel_count_label.text = "sound channel count: %s" % AudioManager.sound_channel_count
@@ -72,6 +100,13 @@ func _input(event: InputEvent):
 			elif event.keycode == KEY_DOWN:
 				AudioManager.sound_channel_count -= 1
 				
+			elif event.keycode == KEY_P:
+				get_tree().paused = !get_tree().paused
+				
 			elif event.keycode == KEY_ESCAPE:
 				AudioManager.unload_all_sounds()
 				AudioManager.unload_all_music()
+				
+				
+func pause_tree(pause: bool) -> void:
+	get_tree().paused = pause

@@ -183,6 +183,26 @@ func _ready():
 #	actor_3.queue_free()
 #	await get_tree().create_timer(5).timeout
 
+	# test; set the pause mode for AudioStreamPlayer while the sound stream is playing
+	#AudioManager.sound_3d_channel_count = 1
+	#await get_tree().create_timer(2).timeout
+	#AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_3,
+		#0, 1.0, 1.0, "", PROCESS_MODE_ALWAYS)
+	#await get_tree().create_timer(0.5).timeout
+	#pause_tree(true)
+	#await get_tree().create_timer(1).timeout
+	#pause_tree(false)
+	
+	# test; set the bus for AudioStreamPlayer while the sound stream is playing
+	#AudioManager.sound_3d_channel_count = 1
+	#await get_tree().create_timer(2).timeout
+	#AudioServer.set_bus_bypass_effects(AudioServer.get_bus_index("SoundMuffle"), true)
+	#AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_3,
+		#0, 1.0, 1.0, "SoundReverb")
+	#await get_tree().create_timer(3).timeout
+	#AudioManager.play_sound(preload("res://assets/sound/laser.ogg"), AudioManager.SoundType.POSITIONAL_3D, actor_3,
+		#0, 1.0, 1.0)
+
 
 func _process(delta):
 	sound_3d_channel_count_label.text = "sound 3d channel count: %s" % AudioManager.sound_3d_channel_count
@@ -228,8 +248,15 @@ func _input(event):
 			elif event.keycode == KEY_DOWN:
 				AudioManager.sound_3d_channel_count -= 1
 				
+			elif event.keycode == KEY_P:
+				get_tree().paused = !get_tree().paused
+				
 			elif event.keycode == KEY_ESCAPE:
 #				AudioManager.sound_3d_channel_count = 0
 				actor_1.queue_free()
 				actor_2.queue_free()
 				actor_3.queue_free()
+				
+				
+func pause_tree(pause: bool) -> void:
+	get_tree().paused = pause

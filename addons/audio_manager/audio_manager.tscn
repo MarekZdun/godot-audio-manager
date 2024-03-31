@@ -4,14 +4,18 @@
 
 [node name="AudioManager" type="Node"]
 script = ExtResource("1")
-audio_bus_default_file_path = "res://resources/audio_bus_default.tres"
+audio_bus_default_file_path = "res://resources/new_audio_bus_layout.tres"
 music_dir_path = "res://assets/music/"
 sound_dir_path = "res://assets/sound/"
 
 [node name="Music" type="Node" parent="."]
+process_mode = 3
 
 [node name="Sound" type="Node" parent="."]
+process_mode = 1
 
 [node name="Sound2D" type="Node" parent="."]
+process_mode = 1
 
 [node name="Sound3D" type="Node" parent="."]
+process_mode = 1

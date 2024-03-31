@@ -31,6 +31,8 @@ const MUSIC_CHANNEL_COUNT_MAX: int = 64
 const SOUND_CHANNEL_COUNT_MAX: int = 64
 const SOUND_2D_CHANNEL_COUNT_MAX: int = 64
 const SOUND_3D_CHANNEL_COUNT_MAX: int = 64
+const DEFAULT_MUSIC_PROCESS_MODE: ProcessMode = PROCESS_MODE_ALWAYS
+const DEFAULT_SOUND_PROCESS_MODE: ProcessMode = PROCESS_MODE_PAUSABLE
 
 @export_file("*.tres") var audio_bus_default_file_path: String:
 	set(value):
@@ -67,6 +69,16 @@ const SOUND_3D_CHANNEL_COUNT_MAX: int = 64
 	set(value):
 		sound_3d_channel_count = clamp(value, 0, SOUND_3D_CHANNEL_COUNT_MAX)
 		_update_sound_3d_channels(sound_3d_channel_count)
+		
+@export var music_process_mode: ProcessMode = DEFAULT_MUSIC_PROCESS_MODE:
+	set(value):
+		music_process_mode = value
+		_update_music_process_mode(music_process_mode)
+		
+@export var sound_process_mode: ProcessMode = DEFAULT_SOUND_PROCESS_MODE:
+	set(value):
+		sound_process_mode = value
+		_update_sound_process_mode(sound_process_mode)
 
 var _sound_stream_players: Dictionary
 var _sound_2d_stream_players: Dictionary
@@ -133,21 +145,24 @@ func unload_music(audio_name: String) -> void:
 		push_error("No loaded music stream found with name: " + audio_name)
 	
 	
-func play_loaded_sound(stream_name: String, sound_type: int, parent: Node = null, 
+func play_loaded_sound(stream_name: String, sound_type: SoundType, parent: Node = null, 
 		priority: int = DEFAULT_SOUND_PRIORITY, volume_db: float = DEFAULT_VOLUME_DB, 
-		pitch_scale: float = DEFAULT_PITCH_SCALE) -> Node:
+		pitch_scale: float = DEFAULT_PITCH_SCALE, override_bus: String = "", 
+		override_process_mode: ProcessMode = -1) -> Node:
 	var stream: AudioStream
 	if _loaded_sound_streams.has(stream_name):
 		stream = _loaded_sound_streams[stream_name]
 	if stream == null:
 		push_error("No audio stream resource loaded with name: " + stream_name)
 	
-	return play_sound(stream, sound_type, parent, priority, volume_db, pitch_scale)
+	return play_sound(stream, sound_type, parent, priority, volume_db, pitch_scale,
+		override_bus, override_process_mode)
 	
 	
-func play_sound(stream: AudioStream, sound_type: int, parent: Node = null, 
+func play_sound(stream: AudioStream, sound_type: SoundType, parent: Node = null, 
 		priority: int = DEFAULT_SOUND_PRIORITY, volume_db: float = DEFAULT_VOLUME_DB, 
-		pitch_scale: float = DEFAULT_PITCH_SCALE) -> Node:
+		pitch_scale: float = DEFAULT_PITCH_SCALE, override_bus: String = "",
+		override_process_mode: ProcessMode = -1) -> Node:
 	if stream == null:
 		return
 			
@@ -210,6 +225,8 @@ func play_sound(stream: AudioStream, sound_type: int, parent: Node = null,
 	
 	if stream_player:	
 		stream_player.stream = stream
+		stream_player.bus = override_bus if override_bus != "" else SOUND_BUS_NAME
+		stream_player.process_mode = override_process_mode if override_process_mode != -1 else PROCESS_MODE_INHERIT
 		stream_player.volume_db = linear_to_db(volume_db)
 		stream_player.pitch_scale = pitch_scale
 		stream_player.play()
@@ -218,18 +235,21 @@ func play_sound(stream: AudioStream, sound_type: int, parent: Node = null,
 	
 
 func play_loaded_music(stream_name: String, volume_db: float = DEFAULT_VOLUME_DB, pitch_scale: float = DEFAULT_PITCH_SCALE,
-		volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION) -> AudioStreamPlayer:
+		volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION, override_bus: String = "", 
+		override_process_mode: ProcessMode = -1) -> AudioStreamPlayer:
 	var stream: AudioStream
 	if _loaded_music_streams.has(stream_name):
 		stream = _loaded_music_streams[stream_name]
 	if stream == null:
 		push_error("No audio stream resource loaded with name: " + stream_name)
 	
-	return play_music(stream, volume_db, pitch_scale, volume_transition_in_duration)
+	return play_music(stream, volume_db, pitch_scale, volume_transition_in_duration,
+		override_bus, override_process_mode)
 
 	
 func play_music(stream: AudioStream, volume_db: float = DEFAULT_VOLUME_DB, pitch_scale: float = DEFAULT_PITCH_SCALE,
-		volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION) -> AudioStreamPlayer:
+		volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION, override_bus: String = "", 
+		override_process_mode: ProcessMode = -1) -> AudioStreamPlayer:
 	if stream == null:
 		return
 			
@@ -241,6 +261,8 @@ func play_music(stream: AudioStream, volume_db: float = DEFAULT_VOLUME_DB, pitch
 				
 	if stream_player:
 		stream_player.stream = stream
+		stream_player.bus = override_bus if override_bus != "" else MUSIC_BUS_NAME
+		stream_player.process_mode = override_process_mode if override_process_mode != -1 else PROCESS_MODE_INHERIT
 		stream_player.pitch_scale = pitch_scale
 		
 		_remove_tween_volume_transition(stream_player)
@@ -483,6 +505,14 @@ func _update_sound_filenames(p_sound_dir_path: String) -> void:
 	_sound_filenames = _get_filenames(p_sound_dir_path)
 	
 	
+func _update_music_process_mode(p_process_mode: ProcessMode) -> void:
+	music_root.process_mode = p_process_mode
+	
+	
+func _update_sound_process_mode(p_process_mode: ProcessMode) -> void:
+	sound_root.process_mode = p_process_mode
+	
+	
 func _remove_connection_tree_exiting(stream_player: Node) -> bool:
 	var removed_connection := false
 	var parent := stream_player.get_parent()
@@ -539,7 +569,7 @@ func _get_filenames(dir_path: String) -> Array:
 	return files
 	
 	
-func _load_from_files(audio_type: int, audio_names: Array) -> Dictionary:
+func _load_from_files(audio_type: AudioType, audio_names: Array) -> Dictionary:
 	var loaded := {}
 	for audio_name in audio_names:
 		var file_name := _get_filename(audio_type, audio_name)
@@ -551,7 +581,7 @@ func _load_from_files(audio_type: int, audio_names: Array) -> Dictionary:
 	return loaded
 	
 	
-func _get_filename(audio_type: int, audio_name: String) -> String:
+func _get_filename(audio_type: AudioType, audio_name: String) -> String:
 	var file_name := ""
 	var files := []
 	
