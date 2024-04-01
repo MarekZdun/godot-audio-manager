@@ -55,7 +55,7 @@ func _ready():
 		
 	# test; set the pause mode and bus for AudioStreamPlayer while the music stream is playing
 	#AudioServer.set_bus_bypass_effects(AudioServer.get_bus_index("MusicMuffle"), true)
-	#AudioManager.play_music(preload("res://assets/music/bgm.ogg"), 1, 1, 2, "MusicReverb", PROCESS_MODE_PAUSABLE)
+	#AudioManager.play_music(preload("res://assets/music/bgm.ogg"), 0.0, 1, 1, 2, "MusicReverb", PROCESS_MODE_PAUSABLE)
 	#await get_tree().create_timer(4).timeout
 	#pause_tree(true)
 	#await get_tree().create_timer(2).timeout
@@ -89,7 +89,7 @@ func _input(event: InputEvent):
 				
 			elif event.keycode == KEY_SPACE:
 				if not _music_stream_player_1 or (_music_stream_player_1 and not _music_stream_player_1.playing):
-					_music_stream_player_1 = AudioManager.play_loaded_music("bgm", 1, 1, 2)
+					_music_stream_player_1 = AudioManager.play_loaded_music("bgm", 0.0, 1, 1, 2)
 					
 				elif _music_stream_player_1 and _music_stream_player_1.playing:
 					AudioManager.stop_music(_music_stream_player_1, 2)

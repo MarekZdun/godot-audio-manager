@@ -21,25 +21,25 @@ func _ready():
 
 	# Music test 1
 #	AudioManager.music_channel_count = 1
-#	_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/rain.ogg"), 1, 1, 2)
+#	_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/rain.ogg"), 0.0, 1, 1, 2)
 #	await get_tree().create_timer(5).timeout
-#	_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/bgm.ogg"), 1, 1, 2)
+#	_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/bgm.ogg"), 0.0, 1, 1, 2)
 #	await get_tree().create_timer(5).timeout
 	
 	# Music test 2
 #	AudioManager.music_channel_count = 1
-#	_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/rain.ogg"), 1, 1, 2)
+#	_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/rain.ogg"), 0.0, 1, 1, 2)
 #	await get_tree().create_timer(1).timeout
-#	_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/bgm.ogg"), 1, 1, 2)
+#	_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/bgm.ogg"), 0.0, 1, 1, 2)
 #	await get_tree().create_timer(5).timeout
 #	AudioManager.music_channel_count = 0
 
 	# Music test 3
 #	AudioManager.music_channel_count = 2
-#	_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/rain.ogg"), 1, 1, 2)
+#	_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/rain.ogg"), 0.0, 1, 1, 2)
 #	await get_tree().create_timer(5).timeout
 #	AudioManager.stop_music(_music_stream_player_1, 2)
-#	_music_stream_player_2 = AudioManager.play_music(preload("res://assets/music/bgm.ogg"), 1, 1, 2)
+#	_music_stream_player_2 = AudioManager.play_music(preload("res://assets/music/bgm.ogg"), 0.0, 1, 1, 2)
 #	await get_tree().create_timer(5).timeout
 #	AudioManager.music_channel_count = 0
 
@@ -237,7 +237,7 @@ func _input(event):
 				
 			elif event.keycode == KEY_SPACE:
 				if not _music_stream_player_1 or (_music_stream_player_1 and not _music_stream_player_1.playing):
-					_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/bgm.ogg"), 1, 1, 2)
+					_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/bgm.ogg"), 0.0, 1, 1, 2)
 					
 				elif _music_stream_player_1 and _music_stream_player_1.playing:
 					AudioManager.stop_music(_music_stream_player_1, 2)

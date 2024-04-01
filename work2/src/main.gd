@@ -206,7 +206,7 @@ func _input(event):
 				
 			elif event.keycode == KEY_SPACE:
 				if not _music_stream_player_1 or (_music_stream_player_1 and not _music_stream_player_1.playing):
-					_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/bgm.ogg"), 0.5, 1, 2)
+					_music_stream_player_1 = AudioManager.play_music(preload("res://assets/music/bgm.ogg"), 0.0, 0.5, 1, 2)
 					
 				elif _music_stream_player_1 and _music_stream_player_1.playing:
 					AudioManager.stop_music(_music_stream_player_1, 2)

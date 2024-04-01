@@ -234,22 +234,22 @@ func play_sound(stream: AudioStream, sound_type: SoundType, parent: Node = null,
 	return stream_player
 	
 
-func play_loaded_music(stream_name: String, volume_db: float = DEFAULT_VOLUME_DB, pitch_scale: float = DEFAULT_PITCH_SCALE,
-		volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION, override_bus: String = "", 
-		override_process_mode: ProcessMode = -1) -> AudioStreamPlayer:
+func play_loaded_music(stream_name: String, position: float = 0.0, volume_db: float = DEFAULT_VOLUME_DB, 
+		pitch_scale: float = DEFAULT_PITCH_SCALE, volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION, 
+		override_bus: String = "", override_process_mode: ProcessMode = -1) -> AudioStreamPlayer:
 	var stream: AudioStream
 	if _loaded_music_streams.has(stream_name):
 		stream = _loaded_music_streams[stream_name]
 	if stream == null:
 		push_error("No audio stream resource loaded with name: " + stream_name)
 	
-	return play_music(stream, volume_db, pitch_scale, volume_transition_in_duration,
+	return play_music(stream, position, volume_db, pitch_scale, volume_transition_in_duration,
 		override_bus, override_process_mode)
 
 	
-func play_music(stream: AudioStream, volume_db: float = DEFAULT_VOLUME_DB, pitch_scale: float = DEFAULT_PITCH_SCALE,
-		volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION, override_bus: String = "", 
-		override_process_mode: ProcessMode = -1) -> AudioStreamPlayer:
+func play_music(stream: AudioStream, position: float = 0.0, volume_db: float = DEFAULT_VOLUME_DB, 
+		pitch_scale: float = DEFAULT_PITCH_SCALE, volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION, 
+		override_bus: String = "", override_process_mode: ProcessMode = -1) -> AudioStreamPlayer:
 	if stream == null:
 		return
 			
@@ -272,7 +272,7 @@ func play_music(stream: AudioStream, volume_db: float = DEFAULT_VOLUME_DB, pitch
 		else:
 			stream_player.volume_db = linear_to_db(volume_db)
 			
-		stream_player.call_deferred("play")
+		stream_player.call_deferred("play", position)
 		
 	return stream_player
 	
