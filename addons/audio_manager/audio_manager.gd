@@ -316,6 +316,58 @@ func create_volume_transition_out(stream_player: Node, duration: float) -> Tween
 	return tween
 	
 	
+## Returns true if the given stream player is currently playing audio.
+func is_playing(stream_player: Node) -> bool:
+	if not is_instance_valid(stream_player):
+		return false
+	
+	if stream_player is AudioStreamPlayer or \
+	   stream_player is AudioStreamPlayer2D or \
+	   stream_player is AudioStreamPlayer3D:
+		return stream_player.playing
+	
+	push_error("Invalid stream player type: ", stream_player.get_class())
+	return false
+
+
+## Returns true if any sound with the given stream name is playing.
+func is_sound_playing(stream_name: String, sound_type: SoundType) -> bool:
+	return is_sound_playing_with_priority(stream_name, sound_type, DEFAULT_SOUND_PRIORITY)
+
+
+## Returns true if any sound with given name and priority >= min_priority is playing.
+func is_sound_playing_with_priority(stream_name: String, sound_type: SoundType, min_priority: int) -> bool:
+	var target_stream := _get_loaded_sound(stream_name)
+	if not target_stream:
+		return false
+	
+	var players = _get_players_by_sound_type(sound_type)
+	var priorities = _get_priorities_by_sound_type(sound_type)
+	
+	for id in players:
+		var player = players[id]
+		var player_priority = priorities.get(id, DEFAULT_SOUND_PRIORITY)
+		
+		if _is_player_playing_sound(player, target_stream) and player_priority >= min_priority:
+			return true
+	
+	return false
+
+
+## Returns true if any music with the given stream name is playing.
+func is_music_playing(stream_name: String) -> bool:
+	var target_stream = _loaded_music_streams.get(stream_name)
+	if not target_stream:
+		push_error("No loaded music stream found with name: " + stream_name)
+		return false
+	
+	for player in _music_stream_players.values():
+		if _is_player_playing_sound(player, target_stream):
+			return true
+	
+	return false
+	
+	
 func _stop_sound_stream_player(stream_player: AudioStreamPlayer) -> void:
 	stream_player.stop()
 	_on_sound_stream_player_finished(stream_player)
@@ -648,6 +700,43 @@ func _find_oldest(stream_players: Dictionary) -> Node:
 				oldest_player = player
 				
 	return oldest_player
+	
+	
+func _get_players_by_sound_type(sound_type: SoundType) -> Dictionary:
+	match sound_type:
+		SoundType.NON_POSITIONAL:
+			return _sound_stream_players
+		SoundType.POSITIONAL_2D:
+			return _sound_2d_stream_players
+		SoundType.POSITIONAL_3D:
+			return _sound_3d_stream_players
+		_:
+			push_error("Unknown sound type: ", sound_type)
+			return {}
+			
+			
+func _get_priorities_by_sound_type(sound_type: SoundType) -> Dictionary:
+	match sound_type:
+		SoundType.NON_POSITIONAL:
+			return _sound_stream_players_priorities
+		SoundType.POSITIONAL_2D:
+			return _sound_2d_stream_players_priorities
+		SoundType.POSITIONAL_3D:
+			return _sound_3d_stream_players_priorities
+		_:
+			push_error("Unknown sound_type: ", sound_type)
+			return {}
+			
+			
+func _get_loaded_sound(stream_name: String) -> AudioStream:
+	if not _loaded_sound_streams.has(stream_name):
+		push_error("No loaded sound stream found with name: " + stream_name)
+		return null
+	return _loaded_sound_streams[stream_name]
+
+
+func _is_player_playing_sound(player: Node, target_stream: AudioStream) -> bool:
+	return is_instance_valid(player) and player.playing and player.stream == target_stream
 	
 	
 func _on_playing_node_with_sound_2d_stream_players_exiting_tree(node: Node) -> void:
