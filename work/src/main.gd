@@ -9,13 +9,13 @@ var _music_stream_player_1: AudioStreamPlayer
 
 
 func _ready():
-	var sounds = [
+	var sounds: Array[String] = [
 		"blip",
 		"confirmation",
 		"laser"
 	]
 	
-	var music = [
+	var music: Array[String] = [
 		"bgm",
 		"rain"
 	]

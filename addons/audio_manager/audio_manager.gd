@@ -96,8 +96,8 @@ var _sound_3d_stream_players_priorities: Dictionary[int, int]
 
 var _sound_filenames: Array[String]
 var _music_filenames: Array[String]
-var _loaded_sound_streams: Dictionary[String, Resource]
-var _loaded_music_streams: Dictionary[String, Resource]
+var _loaded_sound_streams: Dictionary[String, AudioStream]
+var _loaded_music_streams: Dictionary[String, AudioStream]
 
 var _stream_players_tween_volume_transition: Dictionary[int, Tween]
 var _playing_nodes_id_access_sound_2d_stream_players: Dictionary[int, Array]
@@ -115,11 +115,11 @@ func _ready():
 		AudioServer.set_bus_layout(_audio_bus_layout)
 		
 		
-func load_sounds(audio_names: Array) -> void:
+func load_sounds(audio_names: Array[String]) -> void:
 	_loaded_sound_streams = _load_from_files(AudioType.SOUND, audio_names)
 	
 	
-func load_music(audio_names: Array) -> void:
+func load_music(audio_names: Array[String]) -> void:
 	_loaded_music_streams = _load_from_files(AudioType.MUSIC, audio_names)
 	
 	
@@ -580,8 +580,8 @@ func _get_filenames(dir_path: String) -> Array[String]:
 	return files
 	
 	
-func _load_from_files(audio_type: AudioType, audio_names: Array) -> Dictionary[String, Resource]:
-	var loaded: Dictionary[String, Resource]
+func _load_from_files(audio_type: AudioType, audio_names: Array[String]) -> Dictionary[String, AudioStream]:
+	var loaded: Dictionary[String, AudioStream]
 	for audio_name in audio_names:
 		var file_name := _get_filename(audio_type, audio_name)
 		
@@ -600,7 +600,7 @@ func _load_from_files(audio_type: AudioType, audio_names: Array) -> Dictionary[S
 	
 func _get_filename(audio_type: AudioType, audio_name: String) -> String:
 	var file_name := ""
-	var files := []
+	var files: Array[String] = []
 	
 	match audio_type:
 		AudioType.SOUND:
