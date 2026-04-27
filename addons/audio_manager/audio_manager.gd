@@ -20,7 +20,7 @@ enum SoundType {
 }
 
 const DEFAULT_PITCH_SCALE: float = 1.0
-const DEFAULT_VOLUME_DB: float = 1.0
+const DEFAULT_VOLUME_LINEAR: float = 1.0  # 1.0 = 0 dB, 0.5 = -6 dB, 0.0 = -80 dB (cisza)
 const MIN_VOLUME_DB: float = -80.0
 const DEFAULT_SOUND_PRIORITY: int = 0
 const DEFAULT_VOLUME_FADE_IN_DURATION: float = 0.0
@@ -80,28 +80,28 @@ const DEFAULT_SOUND_PROCESS_MODE: ProcessMode = PROCESS_MODE_PAUSABLE
 		sound_process_mode = value
 		_update_sound_process_mode(sound_process_mode)
 
-var _sound_stream_players: Dictionary
-var _sound_2d_stream_players: Dictionary
-var _sound_3d_stream_players: Dictionary
-var _music_stream_players: Dictionary
+var _sound_stream_players: Dictionary[int, AudioStreamPlayer]
+var _sound_2d_stream_players: Dictionary[int, AudioStreamPlayer2D]
+var _sound_3d_stream_players: Dictionary[int, AudioStreamPlayer3D]
+var _music_stream_players: Dictionary[int, AudioStreamPlayer]
 
-var _available_sound_stream_players: Array
-var _available_sound_2d_stream_players: Array
-var _available_sound_3d_stream_players: Array
-var _available_music_stream_players: Array
+var _available_sound_stream_players: Array[AudioStreamPlayer]
+var _available_sound_2d_stream_players: Array[AudioStreamPlayer2D]
+var _available_sound_3d_stream_players: Array[AudioStreamPlayer3D]
+var _available_music_stream_players: Array[AudioStreamPlayer]
 
-var _sound_stream_players_priorities: Dictionary
-var _sound_2d_stream_players_priorities: Dictionary
-var _sound_3d_stream_players_priorities: Dictionary
+var _sound_stream_players_priorities: Dictionary[int, int]
+var _sound_2d_stream_players_priorities: Dictionary[int, int]
+var _sound_3d_stream_players_priorities: Dictionary[int, int]
 
-var _sound_filenames: Array
-var _music_filenames: Array
-var _loaded_sound_streams: Dictionary
-var _loaded_music_streams: Dictionary
+var _sound_filenames: Array[String]
+var _music_filenames: Array[String]
+var _loaded_sound_streams: Dictionary[String, Resource]
+var _loaded_music_streams: Dictionary[String, Resource]
 
-var _stream_players_tween_volume_transition: Dictionary
-var _playing_nodes_id_access_sound_2d_stream_players: Dictionary
-var _playing_nodes_id_access_sound_3d_stream_players: Dictionary
+var _stream_players_tween_volume_transition: Dictionary[int, Tween]
+var _playing_nodes_id_access_sound_2d_stream_players: Dictionary[int, Array]
+var _playing_nodes_id_access_sound_3d_stream_players: Dictionary[int, Array]
 var _audio_bus_layout: AudioBusLayout
 
 @onready var sound_root: Node = get_node("Sound")
@@ -146,7 +146,7 @@ func unload_music(audio_name: String) -> void:
 	
 	
 func play_loaded_sound(stream_name: String, sound_type: SoundType, parent: Node = null, 
-		priority: int = DEFAULT_SOUND_PRIORITY, volume_db: float = DEFAULT_VOLUME_DB, 
+		priority: int = DEFAULT_SOUND_PRIORITY, volume_linear: float = DEFAULT_VOLUME_LINEAR, 
 		pitch_scale: float = DEFAULT_PITCH_SCALE, override_bus: String = "", 
 		override_process_mode: ProcessMode = -1) -> Node:
 	var stream: AudioStream
@@ -155,12 +155,12 @@ func play_loaded_sound(stream_name: String, sound_type: SoundType, parent: Node 
 	if stream == null:
 		push_error("No audio stream resource loaded with name: " + stream_name)
 	
-	return play_sound(stream, sound_type, parent, priority, volume_db, pitch_scale,
+	return play_sound(stream, sound_type, parent, priority, volume_linear, pitch_scale,
 		override_bus, override_process_mode)
 	
 	
 func play_sound(stream: AudioStream, sound_type: SoundType, parent: Node = null, 
-		priority: int = DEFAULT_SOUND_PRIORITY, volume_db: float = DEFAULT_VOLUME_DB, 
+		priority: int = DEFAULT_SOUND_PRIORITY, volume_linear: float = DEFAULT_VOLUME_LINEAR, 
 		pitch_scale: float = DEFAULT_PITCH_SCALE, override_bus: String = "",
 		override_process_mode: ProcessMode = -1) -> Node:
 	if stream == null:
@@ -227,14 +227,14 @@ func play_sound(stream: AudioStream, sound_type: SoundType, parent: Node = null,
 		stream_player.stream = stream
 		stream_player.bus = override_bus if override_bus != "" else SOUND_BUS_NAME
 		stream_player.process_mode = override_process_mode if override_process_mode != -1 else PROCESS_MODE_INHERIT
-		stream_player.volume_db = linear_to_db(volume_db)
+		stream_player.volume_db = linear_to_db(volume_linear)
 		stream_player.pitch_scale = pitch_scale
 		stream_player.play()
 	
 	return stream_player
 	
 
-func play_loaded_music(stream_name: String, position: float = 0.0, volume_db: float = DEFAULT_VOLUME_DB, 
+func play_loaded_music(stream_name: String, position: float = 0.0, volume_linear: float = DEFAULT_VOLUME_LINEAR, 
 		pitch_scale: float = DEFAULT_PITCH_SCALE, volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION, 
 		override_bus: String = "", override_process_mode: ProcessMode = -1) -> AudioStreamPlayer:
 	var stream: AudioStream
@@ -243,11 +243,11 @@ func play_loaded_music(stream_name: String, position: float = 0.0, volume_db: fl
 	if stream == null:
 		push_error("No audio stream resource loaded with name: " + stream_name)
 	
-	return play_music(stream, position, volume_db, pitch_scale, volume_transition_in_duration,
+	return play_music(stream, position, volume_linear, pitch_scale, volume_transition_in_duration,
 		override_bus, override_process_mode)
 
 	
-func play_music(stream: AudioStream, position: float = 0.0, volume_db: float = DEFAULT_VOLUME_DB, 
+func play_music(stream: AudioStream, position: float = 0.0, volume_linear: float = DEFAULT_VOLUME_LINEAR, 
 		pitch_scale: float = DEFAULT_PITCH_SCALE, volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION, 
 		override_bus: String = "", override_process_mode: ProcessMode = -1) -> AudioStreamPlayer:
 	if stream == null:
@@ -267,10 +267,10 @@ func play_music(stream: AudioStream, position: float = 0.0, volume_db: float = D
 		
 		_remove_tween_volume_transition(stream_player)
 		if volume_transition_in_duration > 0:
-			stream_player.volume_db = linear_to_db(MIN_VOLUME_DB)
-			create_volume_transition_in(stream_player, volume_db, volume_transition_in_duration)
+			stream_player.volume_db = MIN_VOLUME_DB
+			create_volume_transition_in(stream_player, volume_linear, volume_transition_in_duration)
 		else:
-			stream_player.volume_db = linear_to_db(volume_db)
+			stream_player.volume_db = linear_to_db(volume_linear)
 			
 		stream_player.call_deferred("play", position)
 		
@@ -298,9 +298,9 @@ func stop_music(stream_player: Node, volume_transition_out_duration: float = DEF
 	_stop_music_stream_player(stream_player)
 	
 	
-func create_volume_transition_in(stream_player: Node, volume_db: float, duration: float) -> Tween:
+func create_volume_transition_in(stream_player: Node, volume_linear: float, duration: float) -> Tween:
 	var tween := stream_player.create_tween()
-	tween.tween_property(stream_player, "volume_db", linear_to_db(volume_db), duration).from(MIN_VOLUME_DB)
+	tween.tween_property(stream_player, "volume_db", linear_to_db(volume_linear), duration).from(MIN_VOLUME_DB)
 	tween.finished.connect(_remove_tween_volume_transition.bind(stream_player))
 	_stream_players_tween_volume_transition[stream_player.get_instance_id()] = tween
 	
@@ -516,7 +516,12 @@ func _update_sound_process_mode(p_process_mode: ProcessMode) -> void:
 func _remove_connection_tree_exiting(stream_player: Node) -> bool:
 	var removed_connection := false
 	var parent := stream_player.get_parent()
+	
+	if not is_instance_valid(parent):
+		return false
+		
 	var parent_id := parent.get_instance_id()
+	
 	if is_instance_valid(stream_player) and is_instance_valid(parent):
 		if stream_player is AudioStreamPlayer2D:
 			if _playing_nodes_id_access_sound_2d_stream_players.has(parent_id):
@@ -542,17 +547,23 @@ func _remove_connection_tree_exiting(stream_player: Node) -> bool:
 	
 	
 func _remove_tween_volume_transition(stream_player: Node) -> void:
-	if stream_player:
-		var stream_player_id := stream_player.get_instance_id()
-		if _stream_players_tween_volume_transition.has(stream_player_id):
-			var tween := _stream_players_tween_volume_transition[stream_player_id] as Tween
-			if tween and tween.is_valid():
+	if not stream_player:
+		return
+		
+	var stream_player_id := stream_player.get_instance_id()
+	
+	if _stream_players_tween_volume_transition.has(stream_player_id):
+		var tween = _stream_players_tween_volume_transition[stream_player_id]
+		
+		if tween is Tween:
+			if tween.is_valid():
 				tween.kill()
-			_stream_players_tween_volume_transition.erase(stream_player_id)
+		
+		_stream_players_tween_volume_transition.erase(stream_player_id)
 	
 	
-func _get_filenames(dir_path: String) -> Array:
-	var files := []
+func _get_filenames(dir_path: String) -> Array[String]:
+	var files: Array[String]
 	var dir := DirAccess.open(dir_path)
 	if dir:
 		dir.list_dir_begin()
@@ -569,12 +580,18 @@ func _get_filenames(dir_path: String) -> Array:
 	return files
 	
 	
-func _load_from_files(audio_type: AudioType, audio_names: Array) -> Dictionary:
-	var loaded := {}
+func _load_from_files(audio_type: AudioType, audio_names: Array) -> Dictionary[String, Resource]:
+	var loaded: Dictionary[String, Resource]
 	for audio_name in audio_names:
 		var file_name := _get_filename(audio_type, audio_name)
+		
+		if file_name.is_empty():
+			push_error("No file found for audio name: " + audio_name)
+			continue
+			
 		var dir := sound_dir_path if audio_type == AudioType.SOUND else music_dir_path
 		var audio_stream_file_path := "%s%s" % [dir, file_name]
+		
 		if ResourceLoader.exists(audio_stream_file_path):
 			loaded[audio_name] = ResourceLoader.load(audio_stream_file_path)
 		
@@ -602,32 +619,38 @@ func _get_filename(audio_type: AudioType, audio_name: String) -> String:
 	return file_name
 
 
-func _check_priority_and_find_oldest(stream_players: Dictionary, priorities: Dictionary, priority: int) -> Node:
-	if stream_players.is_empty():
-		return null
+func _check_priority_and_find_oldest(stream_players: Dictionary, priorities: Dictionary[int, int], priority: int) -> Node:
+	var oldest_player: Node = null
+	var max_position: float = -1.0
 	
-	var lowest_priority_stream_players := {}
 	for id in priorities:
 		if priority >= priorities[id]:
-			lowest_priority_stream_players[id] = stream_players[id]
+			var player = stream_players.get(id)
+			
+			if player and (player is AudioStreamPlayer or player is AudioStreamPlayer2D or player is AudioStreamPlayer3D):
+				var current_pos = player.get_playback_position()
+				
+				if oldest_player == null or current_pos > max_position:
+					max_position = current_pos
+					oldest_player = player
+					
+	return oldest_player
 
-	return _find_oldest(lowest_priority_stream_players)
 	
 	
 func _find_oldest(stream_players: Dictionary) -> Node:
-	if stream_players.is_empty():
-		return null
-		
-	var oldest_stream_player: Node
-	var first_latched := false
-	for key in stream_players:
-		if not first_latched:
-			oldest_stream_player = stream_players[key]
-			first_latched = true
-		elif oldest_stream_player.get_playback_position() < stream_players[key].get_playback_position():
-			oldest_stream_player = stream_players[key]
-			
-	return oldest_stream_player
+	var oldest_player: Node = null
+	
+	for player in stream_players.values():
+		if player is AudioStreamPlayer or player is AudioStreamPlayer2D or player is AudioStreamPlayer3D:
+			if oldest_player == null:
+				oldest_player = player
+			elif player.get_playback_position() > oldest_player.get_playback_position():
+				oldest_player = player
+				
+	return oldest_player
+
+
 	
 	
 func _on_playing_node_with_sound_2d_stream_players_exiting_tree(node: Node) -> void:

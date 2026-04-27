@@ -1,21 +1,21 @@
-[gd_scene load_steps=2 format=3 uid="uid://bcqq88l5bnfqg"]
+[gd_scene format=3 uid="uid://bcqq88l5bnfqg"]
 
-[ext_resource type="Script" path="res://addons/audio_manager/audio_manager.gd" id="1"]
+[ext_resource type="Script" uid="uid://ki6a8foww7wv" path="res://addons/audio_manager/audio_manager.gd" id="1"]
 
-[node name="AudioManager" type="Node"]
+[node name="AudioManager" type="Node" unique_id=87610971]
 script = ExtResource("1")
 audio_bus_default_file_path = "res://resources/new_audio_bus_layout.tres"
 music_dir_path = "res://assets/music/"
 sound_dir_path = "res://assets/sound/"
 
-[node name="Music" type="Node" parent="."]
+[node name="Music" type="Node" parent="." unique_id=1431554449]
 process_mode = 3
 
-[node name="Sound" type="Node" parent="."]
+[node name="Sound" type="Node" parent="." unique_id=1856466792]
 process_mode = 1
 
-[node name="Sound2D" type="Node" parent="."]
+[node name="Sound2D" type="Node" parent="." unique_id=1967659581]
 process_mode = 1
 
-[node name="Sound3D" type="Node" parent="."]
+[node name="Sound3D" type="Node" parent="." unique_id=1283992024]
 process_mode = 1

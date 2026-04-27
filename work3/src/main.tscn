@@ -1,6 +1,6 @@
-[gd_scene load_steps=6 format=3 uid="uid://cr6lcwpvfv46"]
+[gd_scene format=3 uid="uid://cr6lcwpvfv46"]
 
-[ext_resource type="Script" path="res://work3/src/main.gd" id="1"]
+[ext_resource type="Script" uid="uid://cxns4olkw82q7" path="res://work3/src/main.gd" id="1"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_50cve"]
 
@@ -13,28 +13,28 @@ font_size = 26
 [sub_resource type="LabelSettings" id="LabelSettings_f1qyd"]
 font_size = 22
 
-[node name="Main" type="Node"]
+[node name="Main" type="Node" unique_id=702012781]
 process_mode = 3
 script = ExtResource("1")
 
-[node name="Actor1" type="MeshInstance3D" parent="."]
+[node name="Actor1" type="MeshInstance3D" parent="." unique_id=251553017]
 process_mode = 1
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0, 0)
 mesh = SubResource("BoxMesh_50cve")
 
-[node name="Actor2" type="MeshInstance3D" parent="."]
+[node name="Actor2" type="MeshInstance3D" parent="." unique_id=859074352]
 process_mode = 1
 mesh = SubResource("BoxMesh_50cve")
 
-[node name="Actor3" type="MeshInstance3D" parent="."]
+[node name="Actor3" type="MeshInstance3D" parent="." unique_id=1989489579]
 process_mode = 1
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, 0)
 mesh = SubResource("BoxMesh_50cve")
 
-[node name="Camera3D" type="Camera3D" parent="."]
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1659192758]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 18, 0)
 
-[node name="Info" type="Label" parent="."]
+[node name="Info" type="Label" parent="." unique_id=955419335]
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
@@ -54,7 +54,7 @@ label_settings = SubResource("LabelSettings_tcx4a")
 horizontal_alignment = 1
 vertical_alignment = 2
 
-[node name="Sound3dChannelCountLabel" type="Label" parent="."]
+[node name="Sound3dChannelCountLabel" type="Label" parent="." unique_id=973259611]
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0

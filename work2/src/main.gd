@@ -228,4 +228,3 @@ func _input(event):
 				
 func pause_tree(pause: bool) -> void:
 	get_tree().paused = pause
-
