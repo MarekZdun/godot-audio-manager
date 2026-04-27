@@ -289,7 +289,7 @@ func stop_sound(stream_player: Node) -> void:
 			_stop_sound_3d_stream_player(stream_player)
 	
 
-func stop_music(stream_player: Node, volume_transition_out_duration: float = DEFAULT_VOLUME_FADE_OUT_DURATION) -> void:
+func stop_music(stream_player: Node, volume_transition_out_duration: float = DEFAULT_VOLUME_FADE_OUT_DURATION):
 	_remove_tween_volume_transition(stream_player)
 	if volume_transition_out_duration > 0:
 		var tween = create_volume_transition_out(stream_player, volume_transition_out_duration)
@@ -635,7 +635,6 @@ func _check_priority_and_find_oldest(stream_players: Dictionary, priorities: Dic
 					oldest_player = player
 					
 	return oldest_player
-
 	
 	
 func _find_oldest(stream_players: Dictionary) -> Node:
@@ -649,8 +648,6 @@ func _find_oldest(stream_players: Dictionary) -> Node:
 				oldest_player = player
 				
 	return oldest_player
-
-
 	
 	
 func _on_playing_node_with_sound_2d_stream_players_exiting_tree(node: Node) -> void:
@@ -671,13 +668,13 @@ func _on_playing_node_with_sound_3d_stream_players_exiting_tree(node: Node) -> v
 				_stop_sound_3d_stream_player(arr[0])
 			
 			
-func _on_sound_stream_player_finished(stream_player):
+func _on_sound_stream_player_finished(stream_player: AudioStreamPlayer):
 	if stream_player:
 		_sound_stream_players_priorities.erase(stream_player.get_instance_id())
 		_available_sound_stream_players.append(stream_player)
 	
 	
-func _on_sound_2d_stream_player_finished(stream_player):
+func _on_sound_2d_stream_player_finished(stream_player: AudioStreamPlayer2D):
 	if stream_player:
 		_remove_connection_tree_exiting(stream_player)
 		stream_player.get_parent().remove_child(stream_player)
@@ -686,7 +683,7 @@ func _on_sound_2d_stream_player_finished(stream_player):
 		_available_sound_2d_stream_players.append(stream_player)
 	
 	
-func _on_sound_3d_stream_player_finished(stream_player):
+func _on_sound_3d_stream_player_finished(stream_player: AudioStreamPlayer3D):
 	if stream_player:
 		_remove_connection_tree_exiting(stream_player)
 		stream_player.get_parent().remove_child(stream_player)
@@ -695,6 +692,6 @@ func _on_sound_3d_stream_player_finished(stream_player):
 		_available_sound_3d_stream_players.append(stream_player)
 	
 	
-func _on_music_stream_player_finished(stream_player):
+func _on_music_stream_player_finished(stream_player: AudioStreamPlayer):
 	if stream_player:
 		_available_music_stream_players.append(stream_player)
