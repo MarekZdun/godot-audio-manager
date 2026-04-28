@@ -34,9 +34,14 @@ const SOUND_2D_CHANNEL_COUNT_MAX: int = 64
 const SOUND_3D_CHANNEL_COUNT_MAX: int = 64
 const DEFAULT_MUSIC_PROCESS_MODE: ProcessMode = PROCESS_MODE_ALWAYS
 const DEFAULT_SOUND_PROCESS_MODE: ProcessMode = PROCESS_MODE_PAUSABLE
-
 ## Sentinel value indicating no process_mode override — not a valid ProcessMode enum value
 const PROCESS_MODE_NO_OVERRIDE: int = -1
+
+## Default polyphony values (how many simultaneous sounds a single player can play)
+const DEFAULT_SOUND_POLYPHONY: int = 1
+const DEFAULT_SOUND_2D_POLYPHONY: int = 1
+const DEFAULT_SOUND_3D_POLYPHONY: int = 1
+const DEFAULT_MUSIC_POLYPHONY: int = 1
 
 @export_file("*.tres") var audio_bus_default_file_path: String:
 	set(value):
@@ -73,6 +78,26 @@ const PROCESS_MODE_NO_OVERRIDE: int = -1
 	set(value):
 		sound_3d_channel_count = clamp(value, 0, SOUND_3D_CHANNEL_COUNT_MAX)
 		_update_sound_3d_channels(sound_3d_channel_count)
+
+@export_range(1, 32) var sound_polyphony: int = DEFAULT_SOUND_POLYPHONY:
+	set(value):
+		sound_polyphony = value
+		_update_sound_polyphony()
+
+@export_range(1, 32) var sound_2d_polyphony: int = DEFAULT_SOUND_2D_POLYPHONY:
+	set(value):
+		sound_2d_polyphony = value
+		_update_sound_2d_polyphony()
+
+@export_range(1, 32) var sound_3d_polyphony: int = DEFAULT_SOUND_3D_POLYPHONY:
+	set(value):
+		sound_3d_polyphony = value
+		_update_sound_3d_polyphony()
+
+@export_range(1, 32) var music_polyphony: int = DEFAULT_MUSIC_POLYPHONY:
+	set(value):
+		music_polyphony = value
+		_update_music_polyphony()
 
 @export var music_process_mode: ProcessMode = DEFAULT_MUSIC_PROCESS_MODE:
 	set(value):
@@ -179,6 +204,14 @@ func play_sound(stream: AudioStream, sound_type: SoundType, parent: Node = null,
 
 	match sound_type:
 		SoundType.NON_POSITIONAL:
+			# OPTIMIZATION: Try to reuse existing player with polyphony
+			var existing_player := _find_existing_non_positional_player(stream)
+			if existing_player:
+				_play_on_existing_player(existing_player, stream, volume_linear, pitch_scale,
+					override_bus, override_process_mode)
+				return existing_player
+			
+			# Normal path: get new player from pool
 			if not _available_sound_stream_players.is_empty():
 				stream_player = _available_sound_stream_players.pop_front()
 			else:
@@ -189,6 +222,15 @@ func play_sound(stream: AudioStream, sound_type: SoundType, parent: Node = null,
 				_sound_stream_players_priorities[stream_player.get_instance_id()] = priority
 
 		SoundType.POSITIONAL_2D:
+			# OPTIMIZATION: Try to reuse existing player on same parent with polyphony
+			if is_instance_valid(parent):
+				var existing_player := _find_existing_2d_player_on_parent(parent, stream)
+				if existing_player:
+					_play_on_existing_player(existing_player, stream, volume_linear, pitch_scale,
+						override_bus, override_process_mode)
+					return existing_player
+			
+			# Normal path: get new player from pool
 			if not _available_sound_2d_stream_players.is_empty():
 				stream_player = _available_sound_2d_stream_players.pop_front()
 			else:
@@ -214,6 +256,15 @@ func play_sound(stream: AudioStream, sound_type: SoundType, parent: Node = null,
 				_sound_2d_stream_players_priorities[stream_player.get_instance_id()] = priority
 
 		SoundType.POSITIONAL_3D:
+			# OPTIMIZATION: Try to reuse existing player on same parent with polyphony
+			if is_instance_valid(parent):
+				var existing_player := _find_existing_3d_player_on_parent(parent, stream)
+				if existing_player:
+					_play_on_existing_player(existing_player, stream, volume_linear, pitch_scale,
+						override_bus, override_process_mode)
+					return existing_player
+			
+			# Normal path: get new player from pool
 			if not _available_sound_3d_stream_players.is_empty():
 				stream_player = _available_sound_3d_stream_players.pop_front()
 			else:
@@ -247,6 +298,49 @@ func play_sound(stream: AudioStream, sound_type: SoundType, parent: Node = null,
 		stream_player.play()
 
 	return stream_player
+	
+	
+# ============================================================================
+# POLYPHONY OPTIMIZATION - FIND EXISTING PLAYERS
+# ============================================================================
+
+## Finds an existing non-positional player with the same stream and available polyphony.
+func _find_existing_non_positional_player(stream: AudioStream) -> AudioStreamPlayer:
+	for player in _sound_stream_players.values():
+		if is_instance_valid(player) and player.stream == stream and player.max_polyphony > 1:
+			return player
+	return null
+
+
+## Finds an existing 2D player on the same parent with the same stream and available polyphony.
+func _find_existing_2d_player_on_parent(parent: Node, stream: AudioStream) -> AudioStreamPlayer2D:
+	for player in _sound_2d_stream_players.values():
+		if is_instance_valid(player) and player.get_parent() == parent:
+			if player.stream == stream and player.max_polyphony > 1:
+				return player
+	return null
+
+
+## Finds an existing 3D player on the same parent with the same stream and available polyphony.
+func _find_existing_3d_player_on_parent(parent: Node, stream: AudioStream) -> AudioStreamPlayer3D:
+	for player in _sound_3d_stream_players.values():
+		if is_instance_valid(player) and player.get_parent() == parent:
+			if player.stream == stream and player.max_polyphony > 1:
+				return player
+	return null
+
+
+## Configures and plays sound on an existing player (without resetting polyphony state).
+func _play_on_existing_player(player: Node, stream: AudioStream, volume_linear: float,
+		pitch_scale: float, override_bus: String, override_process_mode: int) -> void:
+	# Only update stream if it's different (avoid breaking current polyphony)
+	if player.stream != stream:
+		player.stream = stream
+	player.bus = override_bus if override_bus != "" else SOUND_BUS_NAME
+	player.process_mode = override_process_mode if override_process_mode != PROCESS_MODE_NO_OVERRIDE else PROCESS_MODE_INHERIT
+	player.volume_db = linear_to_db(volume_linear)
+	player.pitch_scale = pitch_scale
+	player.play()  # Will use polyphony if max_polyphony > 1
 
 
 # ============================================================================
@@ -767,6 +861,7 @@ func _update_music_channels(count: int) -> void:
 		for i in count - current_count:
 			var sp := AudioStreamPlayer.new()
 			sp.bus = MUSIC_BUS_NAME
+			sp.max_polyphony = music_polyphony
 			sp.finished.connect(_on_music_stream_player_finished.bind(sp))
 			music_root.add_child(sp)
 			_music_stream_players[sp.get_instance_id()] = sp
@@ -795,6 +890,7 @@ func _update_sound_channels(count: int) -> void:
 		for i in count - current_count:
 			var sp := AudioStreamPlayer.new()
 			sp.bus = SOUND_BUS_NAME
+			sp.max_polyphony = sound_polyphony
 			sp.finished.connect(_on_sound_stream_player_finished.bind(sp))
 			sound_root.add_child(sp)
 			_sound_stream_players[sp.get_instance_id()] = sp
@@ -824,6 +920,7 @@ func _update_sound_2d_channels(count: int) -> void:
 		for i in count - current_count:
 			var sp := AudioStreamPlayer2D.new()
 			sp.bus = SOUND_BUS_NAME
+			sp.max_polyphony = sound_2d_polyphony
 			sp.finished.connect(_on_sound_2d_stream_player_finished.bind(sp))
 			sound_2d_root.add_child(sp)
 			_sound_2d_stream_players[sp.get_instance_id()] = sp
@@ -854,6 +951,7 @@ func _update_sound_3d_channels(count: int) -> void:
 		for i in count - current_count:
 			var sp := AudioStreamPlayer3D.new()
 			sp.bus = SOUND_BUS_NAME
+			sp.max_polyphony = sound_3d_polyphony
 			sp.finished.connect(_on_sound_3d_stream_player_finished.bind(sp))
 			sound_3d_root.add_child(sp)
 			_sound_3d_stream_players[sp.get_instance_id()] = sp
@@ -873,6 +971,30 @@ func _update_sound_3d_channels(count: int) -> void:
 				_sound_3d_stream_players.erase(sp_id)
 				_sound_3d_stream_players_priorities.erase(sp_id)
 				sp.queue_free()
+
+
+func _update_sound_polyphony() -> void:
+	for sp in _sound_stream_players.values():
+		if is_instance_valid(sp):
+			sp.max_polyphony = sound_polyphony
+
+
+func _update_sound_2d_polyphony() -> void:
+	for sp in _sound_2d_stream_players.values():
+		if is_instance_valid(sp):
+			sp.max_polyphony = sound_2d_polyphony
+
+
+func _update_sound_3d_polyphony() -> void:
+	for sp in _sound_3d_stream_players.values():
+		if is_instance_valid(sp):
+			sp.max_polyphony = sound_3d_polyphony
+
+
+func _update_music_polyphony() -> void:
+	for sp in _music_stream_players.values():
+		if is_instance_valid(sp):
+			sp.max_polyphony = music_polyphony
 
 
 # ============================================================================
