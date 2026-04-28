@@ -20,7 +20,7 @@ enum SoundType {
 }
 
 const DEFAULT_PITCH_SCALE: float = 1.0
-const DEFAULT_VOLUME_LINEAR: float = 1.0  # 1.0 = 0 dB, 0.5 = -6 dB, 0.0 = -80 dB (cisza)
+const DEFAULT_VOLUME_LINEAR: float = 1.0  # 1.0 = 0 dB, 0.5 = -6 dB, 0.0 = -80 dB (silence)
 const MIN_VOLUME_DB: float = -80.0
 const DEFAULT_SOUND_PRIORITY: int = 0
 const DEFAULT_VOLUME_FADE_IN_DURATION: float = 0.0
@@ -287,6 +287,58 @@ func stop_sound(stream_player: Node) -> void:
 			
 		elif stream_player is AudioStreamPlayer3D:
 			_stop_sound_3d_stream_player(stream_player)
+			
+			
+## Stops all sounds of the given type with priority below the specified threshold.
+func stop_sounds_by_priority_below(sound_type: SoundType, max_priority: int) -> void:
+	var players = _get_players_by_sound_type(sound_type)
+	var priorities = _get_priorities_by_sound_type(sound_type)
+	
+	for id in players:
+		var player = players[id]
+		var priority = priorities.get(id, DEFAULT_SOUND_PRIORITY)
+		
+		if is_instance_valid(player) and player.playing and priority < max_priority:
+			stop_sound(player)
+
+
+## Stops all sounds of the given type with priority above the specified threshold.
+func stop_sounds_by_priority_above(sound_type: SoundType, min_priority: int) -> void:
+	var players = _get_players_by_sound_type(sound_type)
+	var priorities = _get_priorities_by_sound_type(sound_type)
+	
+	for id in players:
+		var player = players[id]
+		var priority = priorities.get(id, DEFAULT_SOUND_PRIORITY)
+		
+		if is_instance_valid(player) and player.playing and priority > min_priority:
+			stop_sound(player)
+
+
+## Stops all sounds of the given type with priority equal to the specified value.
+func stop_sounds_by_priority_equal(sound_type: SoundType, target_priority: int) -> void:
+	var players = _get_players_by_sound_type(sound_type)
+	var priorities = _get_priorities_by_sound_type(sound_type)
+	
+	for id in players:
+		var player = players[id]
+		var priority = priorities.get(id, DEFAULT_SOUND_PRIORITY)
+		
+		if is_instance_valid(player) and player.playing and priority == target_priority:
+			stop_sound(player)
+
+
+## Stops all sounds of the given type with priority within the specified range.
+func stop_sounds_by_priority_range(sound_type: SoundType, min_priority: int, max_priority: int) -> void:
+	var players = _get_players_by_sound_type(sound_type)
+	var priorities = _get_priorities_by_sound_type(sound_type)
+	
+	for id in players:
+		var player = players[id]
+		var priority = priorities.get(id, DEFAULT_SOUND_PRIORITY)
+		
+		if is_instance_valid(player) and player.playing and priority >= min_priority and priority <= max_priority:
+			stop_sound(player)
 	
 
 func stop_music(stream_player: Node, volume_transition_out_duration: float = DEFAULT_VOLUME_FADE_OUT_DURATION):
@@ -366,6 +418,272 @@ func is_music_playing(stream_name: String) -> bool:
 			return true
 	
 	return false
+	
+	
+## ============================================================================
+## PAUSE / RESUME METHODS
+## ============================================================================
+
+## Pauses the given stream player if it's currently playing.
+func pause_sound(stream_player: Node) -> bool:
+	if not is_instance_valid(stream_player):
+		return false
+	
+	var paused := false
+	
+	if stream_player is AudioStreamPlayer or \
+	   stream_player is AudioStreamPlayer2D or \
+	   stream_player is AudioStreamPlayer3D:
+		if stream_player.playing and not stream_player.stream_paused:
+			stream_player.stream_paused = true
+			paused = true
+	else:
+		push_error("Invalid stream player type: ", stream_player.get_class())
+	
+	return paused
+
+
+## Resumes the given stream player if it's paused.
+func resume_sound(stream_player: Node) -> bool:
+	if not is_instance_valid(stream_player):
+		return false
+	
+	var resumed := false
+	
+	if stream_player is AudioStreamPlayer or \
+	   stream_player is AudioStreamPlayer2D or \
+	   stream_player is AudioStreamPlayer3D:
+		if stream_player.stream_paused:
+			stream_player.stream_paused = false
+			resumed = true
+	else:
+		push_error("Invalid stream player type: ", stream_player.get_class())
+	
+	return resumed
+
+
+## Toggles pause state of the given stream player.
+func toggle_sound_pause(stream_player: Node) -> bool:
+	if not is_instance_valid(stream_player):
+		return false
+	
+	if is_playing(stream_player) and not is_paused(stream_player):
+		return pause_sound(stream_player)
+	elif is_paused(stream_player):
+		return resume_sound(stream_player)
+	
+	return false
+
+
+## Returns true if the given stream player is paused.
+func is_paused(stream_player: Node) -> bool:
+	if not is_instance_valid(stream_player):
+		return false
+	
+	if stream_player is AudioStreamPlayer or \
+	   stream_player is AudioStreamPlayer2D or \
+	   stream_player is AudioStreamPlayer3D:
+		return stream_player.stream_paused
+	
+	return false
+
+
+## ============================================================================
+## PAUSE/RESUME BY SOUND TYPE
+## ============================================================================
+
+## Pauses all sounds of the given type.
+func pause_all_sounds_by_type(sound_type: SoundType) -> void:
+	var players = _get_players_by_sound_type(sound_type)
+	for player in players.values():
+		if is_instance_valid(player) and player.playing and not player.stream_paused:
+			player.stream_paused = true
+
+
+## Resumes all sounds of the given type.
+func resume_all_sounds_by_type(sound_type: SoundType) -> void:
+	var players = _get_players_by_sound_type(sound_type)
+	for player in players.values():
+		if is_instance_valid(player) and player.stream_paused:
+			player.stream_paused = false
+
+
+## Toggles pause state for all sounds of the given type.
+func toggle_all_sounds_by_type(sound_type: SoundType) -> void:
+	var players = _get_players_by_sound_type(sound_type)
+	var any_playing := false
+	var any_paused := false
+	
+	# Check current state
+	for player in players.values():
+		if is_instance_valid(player):
+			if player.playing and not player.stream_paused:
+				any_playing = true
+			elif player.stream_paused:
+				any_paused = true
+	
+	# If any are playing, pause all; if all are paused, resume all
+	if any_playing and not any_paused:
+		pause_all_sounds_by_type(sound_type)
+	elif any_paused and not any_playing:
+		resume_all_sounds_by_type(sound_type)
+
+
+## ============================================================================
+## PAUSE/RESUME ALL SOUNDS
+## ============================================================================
+
+## Pauses all sounds (all types: NON_POSITIONAL, POSITIONAL_2D, POSITIONAL_3D).
+func pause_all_sounds() -> void:
+	pause_all_sounds_by_type(SoundType.NON_POSITIONAL)
+	pause_all_sounds_by_type(SoundType.POSITIONAL_2D)
+	pause_all_sounds_by_type(SoundType.POSITIONAL_3D)
+
+
+## Resumes all sounds (all types).
+func resume_all_sounds() -> void:
+	resume_all_sounds_by_type(SoundType.NON_POSITIONAL)
+	resume_all_sounds_by_type(SoundType.POSITIONAL_2D)
+	resume_all_sounds_by_type(SoundType.POSITIONAL_3D)
+
+
+## Toggles pause state for all sounds.
+func toggle_all_sounds() -> void:
+	var any_playing := false
+	var any_paused := false
+	
+	# Check all sound types
+	for sound_type in [SoundType.NON_POSITIONAL, SoundType.POSITIONAL_2D, SoundType.POSITIONAL_3D]:
+		var players = _get_players_by_sound_type(sound_type)
+		for player in players.values():
+			if is_instance_valid(player):
+				if player.playing and not player.stream_paused:
+					any_playing = true
+				elif player.stream_paused:
+					any_paused = true
+	
+	if any_playing and not any_paused:
+		pause_all_sounds()
+	elif any_paused and not any_playing:
+		resume_all_sounds()
+
+
+## ============================================================================
+## MUSIC PAUSE/RESUME
+## ============================================================================
+
+## Pauses the given music player.
+func pause_music(stream_player: AudioStreamPlayer) -> bool:
+	if not is_instance_valid(stream_player):
+		return false
+	
+	if stream_player.playing and not stream_player.stream_paused:
+		stream_player.stream_paused = true
+		return true
+	
+	return false
+
+
+## Resumes the given music player.
+func resume_music(stream_player: AudioStreamPlayer) -> bool:
+	if not is_instance_valid(stream_player):
+		return false
+	
+	if stream_player.stream_paused:
+		stream_player.stream_paused = false
+		return true
+	
+	return false
+
+
+## Toggles pause state of the given music player.
+func toggle_music_pause(stream_player: AudioStreamPlayer) -> bool:
+	if not is_instance_valid(stream_player):
+		return false
+	
+	if stream_player.playing and not stream_player.stream_paused:
+		return pause_music(stream_player)
+	elif stream_player.stream_paused:
+		return resume_music(stream_player)
+	
+	return false
+
+
+## Pauses all currently playing music.
+func pause_all_music() -> void:
+	for player in _music_stream_players.values():
+		if is_instance_valid(player) and player.playing and not player.stream_paused:
+			player.stream_paused = true
+
+
+## Resumes all paused music.
+func resume_all_music() -> void:
+	for player in _music_stream_players.values():
+		if is_instance_valid(player) and player.stream_paused:
+			player.stream_paused = false
+
+
+## Toggles pause state for all music.
+func toggle_all_music() -> void:
+	var any_playing := false
+	var any_paused := false
+	
+	for player in _music_stream_players.values():
+		if is_instance_valid(player):
+			if player.playing and not player.stream_paused:
+				any_playing = true
+			elif player.stream_paused:
+				any_paused = true
+	
+	if any_playing and not any_paused:
+		pause_all_music()
+	elif any_paused and not any_playing:
+		resume_all_music()
+
+
+## ============================================================================
+## GLOBAL PAUSE/RESUME (SOUNDS + MUSIC)
+## ============================================================================
+
+## Pauses all sounds and music (useful for game pause menu).
+func pause_all_audio() -> void:
+	pause_all_sounds()
+	pause_all_music()
+
+
+## Resumes all sounds and music.
+func resume_all_audio() -> void:
+	resume_all_sounds()
+	resume_all_music()
+
+
+## Toggles pause state for all audio (sounds + music).
+func toggle_all_audio() -> void:
+	var any_playing := false
+	var any_paused := false
+	
+	# Check sounds
+	for sound_type in [SoundType.NON_POSITIONAL, SoundType.POSITIONAL_2D, SoundType.POSITIONAL_3D]:
+		var players = _get_players_by_sound_type(sound_type)
+		for player in players.values():
+			if is_instance_valid(player):
+				if player.playing and not player.stream_paused:
+					any_playing = true
+				elif player.stream_paused:
+					any_paused = true
+	
+	# Check music
+	for player in _music_stream_players.values():
+		if is_instance_valid(player):
+			if player.playing and not player.stream_paused:
+				any_playing = true
+			elif player.stream_paused:
+				any_paused = true
+	
+	if any_playing and not any_paused:
+		pause_all_audio()
+	elif any_paused and not any_playing:
+		resume_all_audio()
 	
 	
 func _stop_sound_stream_player(stream_player: AudioStreamPlayer) -> void:
