@@ -1,12 +1,35 @@
 @tool
 extends Node
 
-## The Audio Manager enables the user to configure a pool of AudioStreamPlayers associated with
-## playing non-positional sounds, 2D sounds, 3D sounds, and music. When there is a need to play
-## a specific AudioStream, Audio Manager retrieves a suitable AudioStreamPlayer from the pool and
-## plays the requested AudioStream on it. Once the AudioStream playback is completed,
-## the AudioStreamPlayer is automatically returned to the pool. This allows the user to reuse
-## AudioStreamPlayers and avoid an excessive number of AudioStreamPlayers on the scene.
+## Audio Manager - efficient pooling and playback system for sounds and music.
+##
+## This manager maintains pools of AudioStreamPlayers for different audio types:
+## - NON_POSITIONAL: Standard 2D sounds (UI, global effects)
+## - POSITIONAL_2D: 2D positional sounds (footsteps, explosions in 2D space)
+## - POSITIONAL_3D: 3D positional sounds (footsteps, explosions in 3D space)
+## - MUSIC: Background music with crossfade support
+##
+## Key features:
+## - Automatic player pooling and recycling
+## - Priority system: low-priority sounds are replaced when channels are full
+## - Polyphony: single player can play multiple simultaneous sounds (configurable)
+## - Fade in/out for volume transitions
+## - Pause/resume for all audio or specific types
+## - Playback state queries (is_playing, is_paused, is_sound_playing)
+## - Priority-based batch stopping
+##
+## Usage example:
+## @gdscript
+## # Play a sound
+## var player = audio_manager.play_loaded_sound("explosion", SoundType.POSITIONAL_2D, get_parent())
+##
+## # Check if playing
+## if audio_manager.is_playing(player):
+##     audio_manager.stop_sound(player)
+##
+## # Pause all audio for game menu
+## audio_manager.pause_all_audio()
+## audio_manager.resume_all_audio()
 
 enum AudioType {
 	SOUND,
@@ -14,170 +37,223 @@ enum AudioType {
 }
 
 enum SoundType {
-	NON_POSITIONAL,
-	POSITIONAL_2D,
-	POSITIONAL_3D
+	NON_POSITIONAL,   ## Standard 2D sound (UI, global)
+	POSITIONAL_2D,    ## 2D positional sound (attaches to parent)
+	POSITIONAL_3D     ## 3D positional sound (attaches to parent)
 }
 
+# ============================================================================
+# CONSTANTS
+# ============================================================================
+
 const DEFAULT_PITCH_SCALE: float = 1.0
-## Linear volume: 1.0 = 0 dB (full volume), 0.5 ≈ -6 dB, 0.0 = silence
+
+## Linear volume scale: 1.0 = 0 dB (full volume), 0.5 ≈ -6 dB, 0.0 = -80 dB (silence)
 const DEFAULT_VOLUME_LINEAR: float = 1.0
+
+## Minimum volume in decibels (silence)
 const MIN_VOLUME_DB: float = -80.0
+
 const DEFAULT_SOUND_PRIORITY: int = 0
 const DEFAULT_VOLUME_FADE_IN_DURATION: float = 0.0
 const DEFAULT_VOLUME_FADE_OUT_DURATION: float = 0.0
+
+## Audio bus names (must exist in the project's audio bus layout)
 const MUSIC_BUS_NAME: String = "Music"
 const SOUND_BUS_NAME: String = "Sound"
+
+## Maximum channel counts per audio type
 const MUSIC_CHANNEL_COUNT_MAX: int = 64
 const SOUND_CHANNEL_COUNT_MAX: int = 64
 const SOUND_2D_CHANNEL_COUNT_MAX: int = 64
 const SOUND_3D_CHANNEL_COUNT_MAX: int = 64
+
 const DEFAULT_MUSIC_PROCESS_MODE: ProcessMode = PROCESS_MODE_ALWAYS
 const DEFAULT_SOUND_PROCESS_MODE: ProcessMode = PROCESS_MODE_PAUSABLE
-## Sentinel value indicating no process_mode override — not a valid ProcessMode enum value
+
+## Sentinel value for "no override" - not a valid ProcessMode value
 const PROCESS_MODE_NO_OVERRIDE: int = -1
 
-## Default polyphony values (how many simultaneous sounds a single player can play)
+## Default polyphony: how many simultaneous sounds a single player can play.
+## Polyphony > 1 allows a single player to layer multiple sounds.
 const DEFAULT_SOUND_POLYPHONY: int = 1
 const DEFAULT_SOUND_2D_POLYPHONY: int = 1
 const DEFAULT_SOUND_3D_POLYPHONY: int = 1
 const DEFAULT_MUSIC_POLYPHONY: int = 1
 
+# ============================================================================
+# EXPORTED PROPERTIES
+# ============================================================================
+
+## Path to AudioBusLayout resource file (.tres)
 @export_file("*.tres") var audio_bus_default_file_path: String:
 	set(value):
 		audio_bus_default_file_path = value
 		_update_audio_bus_from_file_path()
 		update_configuration_warnings()
 
+## Directory containing music files (for auto-discovery)
 @export_dir var music_dir_path: String = "":
 	set(value):
 		music_dir_path = value
 		_update_music_filenames(music_dir_path)
 
+## Directory containing sound files (for auto-discovery)
 @export_dir var sound_dir_path: String = "":
 	set(value):
 		sound_dir_path = value
 		_update_sound_filenames(sound_dir_path)
 
+## Number of music channels (0 = no music playback, 1-64 = channel count).
+## Set to 0 to completely disable music and save resources.
 @export_range(0, MUSIC_CHANNEL_COUNT_MAX) var music_channel_count: int = 0:
 	set(value):
 		music_channel_count = clamp(value, 0, MUSIC_CHANNEL_COUNT_MAX)
 		_update_music_channels(music_channel_count)
 
+## Number of non-positional sound channels (0 = no sounds, 1-64 = channel count).
+## Use 0 to disable this sound type entirely.
 @export_range(0, SOUND_CHANNEL_COUNT_MAX) var sound_channel_count: int = 0:
 	set(value):
 		sound_channel_count = clamp(value, 0, SOUND_CHANNEL_COUNT_MAX)
 		_update_sound_channels(sound_channel_count)
 
+## Number of 2D positional sound channels (0 = no 2D sounds, 1-64 = channel count).
 @export_range(0, SOUND_2D_CHANNEL_COUNT_MAX) var sound_2d_channel_count: int = 0:
 	set(value):
 		sound_2d_channel_count = clamp(value, 0, SOUND_2D_CHANNEL_COUNT_MAX)
 		_update_sound_2d_channels(sound_2d_channel_count)
 
+## Number of 3D positional sound channels (0 = no 3D sounds, 1-64 = channel count).
 @export_range(0, SOUND_3D_CHANNEL_COUNT_MAX) var sound_3d_channel_count: int = 0:
 	set(value):
 		sound_3d_channel_count = clamp(value, 0, SOUND_3D_CHANNEL_COUNT_MAX)
 		_update_sound_3d_channels(sound_3d_channel_count)
 
+## Polyphony for non-positional sounds (1-32). Higher values allow overlapping sounds on one player.
 @export_range(1, 32) var sound_polyphony: int = DEFAULT_SOUND_POLYPHONY:
 	set(value):
 		sound_polyphony = value
 		_update_sound_polyphony()
 
+## Polyphony for 2D positional sounds
 @export_range(1, 32) var sound_2d_polyphony: int = DEFAULT_SOUND_2D_POLYPHONY:
 	set(value):
 		sound_2d_polyphony = value
 		_update_sound_2d_polyphony()
 
+## Polyphony for 3D positional sounds
 @export_range(1, 32) var sound_3d_polyphony: int = DEFAULT_SOUND_3D_POLYPHONY:
 	set(value):
 		sound_3d_polyphony = value
 		_update_sound_3d_polyphony()
 
+## Polyphony for music (usually 1, useful for layered/adaptive music)
 @export_range(1, 32) var music_polyphony: int = DEFAULT_MUSIC_POLYPHONY:
 	set(value):
 		music_polyphony = value
 		_update_music_polyphony()
 
+## Process mode for music (when the game is paused)
 @export var music_process_mode: ProcessMode = DEFAULT_MUSIC_PROCESS_MODE:
 	set(value):
 		music_process_mode = value
 		_update_music_process_mode(music_process_mode)
 
+## Process mode for all sounds (applies to NON_POSITIONAL, POSITIONAL_2D, POSITIONAL_3D)
 @export var sound_process_mode: ProcessMode = DEFAULT_SOUND_PROCESS_MODE:
 	set(value):
 		sound_process_mode = value
 		_update_sound_process_mode(sound_process_mode)
 
+# ============================================================================
+# PRIVATE VARIABLES
+# ============================================================================
+
+# Active players dictionaries (instance_id -> player)
 var _sound_stream_players: Dictionary[int, AudioStreamPlayer]
 var _sound_2d_stream_players: Dictionary[int, AudioStreamPlayer2D]
 var _sound_3d_stream_players: Dictionary[int, AudioStreamPlayer3D]
 var _music_stream_players: Dictionary[int, AudioStreamPlayer]
 
+# Available (idle) players pools
 var _available_sound_stream_players: Array[AudioStreamPlayer]
 var _available_sound_2d_stream_players: Array[AudioStreamPlayer2D]
 var _available_sound_3d_stream_players: Array[AudioStreamPlayer3D]
 var _available_music_stream_players: Array[AudioStreamPlayer]
 
+# Priority tracking (instance_id -> priority)
 var _sound_stream_players_priorities: Dictionary[int, int]
 var _sound_2d_stream_players_priorities: Dictionary[int, int]
 var _sound_3d_stream_players_priorities: Dictionary[int, int]
 
+# File tracking
 var _sound_filenames: Array[String]
 var _music_filenames: Array[String]
+
+# Loaded audio streams
 var _loaded_sound_streams: Dictionary[String, AudioStream]
 var _loaded_music_streams: Dictionary[String, AudioStream]
 
+# Volume transition tracking
 var _stream_players_tween_volume_transition: Dictionary[int, Tween]
+
+# Parent tracking for positional sounds (parent_id -> array of players)
 var _playing_nodes_id_access_sound_2d_stream_players: Dictionary[int, Array]
 var _playing_nodes_id_access_sound_3d_stream_players: Dictionary[int, Array]
+
 var _audio_bus_layout: AudioBusLayout
 
+# Root nodes for organizing players in the scene tree
 @onready var sound_root: Node = get_node("Sound")
 @onready var sound_2d_root: Node = get_node("Sound2D")
 @onready var sound_3d_root: Node = get_node("Sound3D")
 @onready var music_root: Node = get_node("Music")
 
+# ============================================================================
+# INITIALIZATION
+# ============================================================================
 
 func _ready() -> void:
 	if _audio_bus_layout:
 		AudioServer.set_bus_layout(_audio_bus_layout)
 
-
 # ============================================================================
 # LOADING / UNLOADING
 # ============================================================================
 
+## Load multiple sounds from files. Use loaded names with play_loaded_sound().
 func load_sounds(audio_names: Array[String]) -> void:
 	_loaded_sound_streams = _load_from_files(AudioType.SOUND, audio_names)
 
-
+## Load multiple music tracks from files. Use loaded names with play_loaded_music().
 func load_music(audio_names: Array[String]) -> void:
 	_loaded_music_streams = _load_from_files(AudioType.MUSIC, audio_names)
 
-
+## Unload all loaded sounds (frees memory).
 func unload_all_sounds() -> void:
 	_loaded_sound_streams = {}
 
-
+## Unload all loaded music.
 func unload_all_music() -> void:
 	_loaded_music_streams = {}
 
-
+## Unload a specific sound by name.
 func unload_sound(audio_name: String) -> void:
 	if not _loaded_sound_streams.erase(audio_name):
 		push_error("No loaded sound stream found with name: " + audio_name)
 
-
+## Unload a specific music track by name.
 func unload_music(audio_name: String) -> void:
 	if not _loaded_music_streams.erase(audio_name):
 		push_error("No loaded music stream found with name: " + audio_name)
-
 
 # ============================================================================
 # SOUND PLAYBACK
 # ============================================================================
 
+## Play a loaded sound by name.
+## Returns the AudioStreamPlayer node (or null if failed).
 func play_loaded_sound(stream_name: String, sound_type: SoundType, parent: Node = null,
 		priority: int = DEFAULT_SOUND_PRIORITY, volume_linear: float = DEFAULT_VOLUME_LINEAR,
 		pitch_scale: float = DEFAULT_PITCH_SCALE, override_bus: String = "",
@@ -193,6 +269,8 @@ func play_loaded_sound(stream_name: String, sound_type: SoundType, parent: Node 
 		override_bus, override_process_mode)
 
 
+## Play a sound from an AudioStream resource.
+## Returns the AudioStreamPlayer node (or null if failed).
 func play_sound(stream: AudioStream, sound_type: SoundType, parent: Node = null,
 		priority: int = DEFAULT_SOUND_PRIORITY, volume_linear: float = DEFAULT_VOLUME_LINEAR,
 		pitch_scale: float = DEFAULT_PITCH_SCALE, override_bus: String = "",
@@ -204,7 +282,7 @@ func play_sound(stream: AudioStream, sound_type: SoundType, parent: Node = null,
 
 	match sound_type:
 		SoundType.NON_POSITIONAL:
-			# OPTIMIZATION: Try to reuse existing player with polyphony
+			# Optimization: Reuse existing player with polyphony
 			var existing_player := _find_existing_non_positional_player(stream)
 			if existing_player:
 				_play_on_existing_player(existing_player, stream, volume_linear, pitch_scale,
@@ -222,7 +300,7 @@ func play_sound(stream: AudioStream, sound_type: SoundType, parent: Node = null,
 				_sound_stream_players_priorities[stream_player.get_instance_id()] = priority
 
 		SoundType.POSITIONAL_2D:
-			# OPTIMIZATION: Try to reuse existing player on same parent with polyphony
+			# Optimization: Reuse existing player on same parent with polyphony
 			if is_instance_valid(parent):
 				var existing_player := _find_existing_2d_player_on_parent(parent, stream)
 				if existing_player:
@@ -256,7 +334,7 @@ func play_sound(stream: AudioStream, sound_type: SoundType, parent: Node = null,
 				_sound_2d_stream_players_priorities[stream_player.get_instance_id()] = priority
 
 		SoundType.POSITIONAL_3D:
-			# OPTIMIZATION: Try to reuse existing player on same parent with polyphony
+			# Optimization: Reuse existing player on same parent with polyphony
 			if is_instance_valid(parent):
 				var existing_player := _find_existing_3d_player_on_parent(parent, stream)
 				if existing_player:
@@ -298,21 +376,19 @@ func play_sound(stream: AudioStream, sound_type: SoundType, parent: Node = null,
 		stream_player.play()
 
 	return stream_player
-	
-	
+
 # ============================================================================
-# POLYPHONY OPTIMIZATION - FIND EXISTING PLAYERS
+# POLYPHONY OPTIMIZATION
 # ============================================================================
 
-## Finds an existing non-positional player with the same stream and available polyphony.
+## Finds existing non-positional player with same stream and available polyphony.
 func _find_existing_non_positional_player(stream: AudioStream) -> AudioStreamPlayer:
 	for player in _sound_stream_players.values():
 		if is_instance_valid(player) and player.stream == stream and player.max_polyphony > 1:
 			return player
 	return null
 
-
-## Finds an existing 2D player on the same parent with the same stream and available polyphony.
+## Finds existing 2D player on same parent with same stream and available polyphony.
 func _find_existing_2d_player_on_parent(parent: Node, stream: AudioStream) -> AudioStreamPlayer2D:
 	for player in _sound_2d_stream_players.values():
 		if is_instance_valid(player) and player.get_parent() == parent:
@@ -320,8 +396,7 @@ func _find_existing_2d_player_on_parent(parent: Node, stream: AudioStream) -> Au
 				return player
 	return null
 
-
-## Finds an existing 3D player on the same parent with the same stream and available polyphony.
+## Finds existing 3D player on same parent with same stream and available polyphony.
 func _find_existing_3d_player_on_parent(parent: Node, stream: AudioStream) -> AudioStreamPlayer3D:
 	for player in _sound_3d_stream_players.values():
 		if is_instance_valid(player) and player.get_parent() == parent:
@@ -329,24 +404,23 @@ func _find_existing_3d_player_on_parent(parent: Node, stream: AudioStream) -> Au
 				return player
 	return null
 
-
-## Configures and plays sound on an existing player (without resetting polyphony state).
+## Plays sound on existing player (preserves polyphony state).
 func _play_on_existing_player(player: Node, stream: AudioStream, volume_linear: float,
 		pitch_scale: float, override_bus: String, override_process_mode: int) -> void:
-	# Only update stream if it's different (avoid breaking current polyphony)
+	# Only update stream if different (otherwise keep current polyphony running)
 	if player.stream != stream:
 		player.stream = stream
 	player.bus = override_bus if override_bus != "" else SOUND_BUS_NAME
 	player.process_mode = override_process_mode if override_process_mode != PROCESS_MODE_NO_OVERRIDE else PROCESS_MODE_INHERIT
 	player.volume_db = linear_to_db(volume_linear)
 	player.pitch_scale = pitch_scale
-	player.play()  # Will use polyphony if max_polyphony > 1
-
+	player.play()  # Uses polyphony if max_polyphony > 1
 
 # ============================================================================
 # MUSIC PLAYBACK
 # ============================================================================
 
+## Play loaded music by name. Returns the AudioStreamPlayer node.
 func play_loaded_music(stream_name: String, position: float = 0.0,
 		volume_linear: float = DEFAULT_VOLUME_LINEAR, pitch_scale: float = DEFAULT_PITCH_SCALE,
 		volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION,
@@ -362,6 +436,7 @@ func play_loaded_music(stream_name: String, position: float = 0.0,
 		volume_transition_in_duration, override_bus, override_process_mode)
 
 
+## Play music from an AudioStream resource. Returns the AudioStreamPlayer node.
 func play_music(stream: AudioStream, position: float = 0.0,
 		volume_linear: float = DEFAULT_VOLUME_LINEAR, pitch_scale: float = DEFAULT_PITCH_SCALE,
 		volume_transition_in_duration: float = DEFAULT_VOLUME_FADE_IN_DURATION,
@@ -392,11 +467,11 @@ func play_music(stream: AudioStream, position: float = 0.0,
 
 	return stream_player
 
-
 # ============================================================================
 # STOPPING SOUNDS
 # ============================================================================
 
+## Stop a specific sound player.
 func stop_sound(stream_player: Node) -> void:
 	if not is_instance_valid(stream_player):
 		return
@@ -408,8 +483,7 @@ func stop_sound(stream_player: Node) -> void:
 	elif stream_player is AudioStreamPlayer3D:
 		_stop_sound_3d_stream_player(stream_player)
 
-
-## Stops all sounds of the given type with priority strictly below [param max_priority].
+## Stop all sounds with priority BELOW the given threshold.
 func stop_sounds_by_priority_below(sound_type: SoundType, max_priority: int) -> void:
 	var players := _get_players_by_sound_type(sound_type)
 	var priorities := _get_priorities_by_sound_type(sound_type)
@@ -421,8 +495,7 @@ func stop_sounds_by_priority_below(sound_type: SoundType, max_priority: int) -> 
 		if is_instance_valid(player) and player.playing and priority < max_priority:
 			stop_sound(player)
 
-
-## Stops all sounds of the given type with priority strictly above [param min_priority].
+## Stop all sounds with priority ABOVE the given threshold.
 func stop_sounds_by_priority_above(sound_type: SoundType, min_priority: int) -> void:
 	var players := _get_players_by_sound_type(sound_type)
 	var priorities := _get_priorities_by_sound_type(sound_type)
@@ -434,8 +507,7 @@ func stop_sounds_by_priority_above(sound_type: SoundType, min_priority: int) -> 
 		if is_instance_valid(player) and player.playing and priority > min_priority:
 			stop_sound(player)
 
-
-## Stops all sounds of the given type with priority equal to [param target_priority].
+## Stop all sounds with priority EQUAL to the given value.
 func stop_sounds_by_priority_equal(sound_type: SoundType, target_priority: int) -> void:
 	var players := _get_players_by_sound_type(sound_type)
 	var priorities := _get_priorities_by_sound_type(sound_type)
@@ -447,8 +519,7 @@ func stop_sounds_by_priority_equal(sound_type: SoundType, target_priority: int) 
 		if is_instance_valid(player) and player.playing and priority == target_priority:
 			stop_sound(player)
 
-
-## Stops all sounds of the given type with priority within [param min_priority]..[param max_priority] (inclusive).
+## Stop all sounds with priority within the inclusive range.
 func stop_sounds_by_priority_range(sound_type: SoundType, min_priority: int, max_priority: int) -> void:
 	var players := _get_players_by_sound_type(sound_type)
 	var priorities := _get_priorities_by_sound_type(sound_type)
@@ -461,11 +532,11 @@ func stop_sounds_by_priority_range(sound_type: SoundType, min_priority: int, max
 				and priority >= min_priority and priority <= max_priority:
 			stop_sound(player)
 
-
 # ============================================================================
 # STOPPING MUSIC
 # ============================================================================
 
+## Stop a specific music player (with optional fade-out).
 func stop_music(stream_player: AudioStreamPlayer,
 		volume_transition_out_duration: float = DEFAULT_VOLUME_FADE_OUT_DURATION) -> void:
 	if not is_instance_valid(stream_player):
@@ -476,17 +547,16 @@ func stop_music(stream_player: AudioStreamPlayer,
 	if volume_transition_out_duration > 0.0:
 		var tween := create_volume_transition_out(stream_player, volume_transition_out_duration)
 		await tween.finished
-		## FIX: re-check validity after await — the node may have been freed during the fade-out
 		if not is_instance_valid(stream_player):
 			return
 
 	_stop_music_stream_player(stream_player)
 
-
 # ============================================================================
 # VOLUME TRANSITIONS (FADE)
 # ============================================================================
 
+## Create a fade-in transition for a player.
 func create_volume_transition_in(stream_player: Node, volume_linear: float, duration: float) -> Tween:
 	var tween := stream_player.create_tween()
 	tween.tween_property(stream_player, "volume_db", linear_to_db(volume_linear), duration) \
@@ -495,7 +565,7 @@ func create_volume_transition_in(stream_player: Node, volume_linear: float, dura
 	_stream_players_tween_volume_transition[stream_player.get_instance_id()] = tween
 	return tween
 
-
+## Create a fade-out transition for a player.
 func create_volume_transition_out(stream_player: Node, duration: float) -> Tween:
 	var tween := stream_player.create_tween()
 	tween.tween_property(stream_player, "volume_db", MIN_VOLUME_DB, duration)
@@ -503,12 +573,11 @@ func create_volume_transition_out(stream_player: Node, duration: float) -> Tween
 	_stream_players_tween_volume_transition[stream_player.get_instance_id()] = tween
 	return tween
 
-
 # ============================================================================
 # PLAYBACK STATE QUERIES
 # ============================================================================
 
-## Returns true if the given stream player is currently playing audio.
+## Check if a specific player is currently playing.
 func is_playing(stream_player: Node) -> bool:
 	if not is_instance_valid(stream_player):
 		return false
@@ -521,16 +590,11 @@ func is_playing(stream_player: Node) -> bool:
 	push_error("Invalid stream player type: ", stream_player.get_class())
 	return false
 
-
-## Returns true if any sound with the given stream name is currently playing.
-## Note: only detects sounds with priority >= DEFAULT_SOUND_PRIORITY (0).
-## Use [method is_sound_playing_with_priority] with a negative min_priority
-## if you use negative priorities.
+## Check if any sound with the given name is playing (priority >= 0).
 func is_sound_playing(stream_name: String, sound_type: SoundType) -> bool:
 	return is_sound_playing_with_priority(stream_name, sound_type, DEFAULT_SOUND_PRIORITY)
 
-
-## Returns true if any sound with the given name and priority >= [param min_priority] is playing.
+## Check if any sound with the given name and priority >= min_priority is playing.
 func is_sound_playing_with_priority(stream_name: String, sound_type: SoundType, min_priority: int) -> bool:
 	var target_stream := _get_loaded_sound(stream_name)
 	if not target_stream:
@@ -548,8 +612,7 @@ func is_sound_playing_with_priority(stream_name: String, sound_type: SoundType, 
 
 	return false
 
-
-## Returns true if music with the given stream name is currently playing.
+## Check if the given music track is currently playing.
 func is_music_playing(stream_name: String) -> bool:
 	var target_stream: AudioStream = _loaded_music_streams.get(stream_name)
 	if not target_stream:
@@ -562,12 +625,11 @@ func is_music_playing(stream_name: String) -> bool:
 
 	return false
 
-
 # ============================================================================
 # PAUSE / RESUME — SINGLE PLAYER
 # ============================================================================
 
-## Pauses the given stream player if it is currently playing.
+## Pause a single sound player.
 func pause_sound(stream_player: Node) -> bool:
 	if not is_instance_valid(stream_player):
 		return false
@@ -583,8 +645,7 @@ func pause_sound(stream_player: Node) -> bool:
 
 	return false
 
-
-## Resumes the given stream player if it is paused.
+## Resume a paused sound player.
 func resume_sound(stream_player: Node) -> bool:
 	if not is_instance_valid(stream_player):
 		return false
@@ -600,8 +661,7 @@ func resume_sound(stream_player: Node) -> bool:
 
 	return false
 
-
-## Toggles the pause state of the given stream player.
+## Toggle pause state of a sound player.
 func toggle_sound_pause(stream_player: Node) -> bool:
 	if not is_instance_valid(stream_player):
 		return false
@@ -613,8 +673,7 @@ func toggle_sound_pause(stream_player: Node) -> bool:
 
 	return false
 
-
-## Returns true if the given stream player is paused.
+## Check if a player is currently paused.
 func is_paused(stream_player: Node) -> bool:
 	if not is_instance_valid(stream_player):
 		return false
@@ -626,58 +685,51 @@ func is_paused(stream_player: Node) -> bool:
 
 	return false
 
-
 # ============================================================================
 # PAUSE / RESUME — BY SOUND TYPE
 # ============================================================================
 
-## Pauses all sounds of the given type.
+## Pause all sounds of the given type.
 func pause_all_sounds_by_type(sound_type: SoundType) -> void:
 	var players := _get_players_by_sound_type(sound_type)
 	for player in players.values():
 		if is_instance_valid(player) and player.playing and not player.stream_paused:
 			player.stream_paused = true
 
-
-## Resumes all sounds of the given type.
+## Resume all sounds of the given type.
 func resume_all_sounds_by_type(sound_type: SoundType) -> void:
 	var players := _get_players_by_sound_type(sound_type)
 	for player in players.values():
 		if is_instance_valid(player) and player.stream_paused:
 			player.stream_paused = false
 
-
-## Toggles the pause state for all sounds of the given type.
+## Toggle pause state for all sounds of the given type.
 func toggle_all_sounds_by_type(sound_type: SoundType) -> void:
 	var players := _get_players_by_sound_type(sound_type)
 	var state := _get_players_pause_state(players)
 
-	## If anything is playing — pause all; if all are paused — resume all
 	if state.any_playing and not state.any_paused:
 		pause_all_sounds_by_type(sound_type)
 	elif state.any_paused and not state.any_playing:
 		resume_all_sounds_by_type(sound_type)
 
-
 # ============================================================================
 # PAUSE / RESUME — ALL SOUNDS
 # ============================================================================
 
-## Pauses all sounds (all types: NON_POSITIONAL, POSITIONAL_2D, POSITIONAL_3D).
+## Pause all sounds (all types).
 func pause_all_sounds() -> void:
 	pause_all_sounds_by_type(SoundType.NON_POSITIONAL)
 	pause_all_sounds_by_type(SoundType.POSITIONAL_2D)
 	pause_all_sounds_by_type(SoundType.POSITIONAL_3D)
 
-
-## Resumes all sounds (all types).
+## Resume all sounds (all types).
 func resume_all_sounds() -> void:
 	resume_all_sounds_by_type(SoundType.NON_POSITIONAL)
 	resume_all_sounds_by_type(SoundType.POSITIONAL_2D)
 	resume_all_sounds_by_type(SoundType.POSITIONAL_3D)
 
-
-## Toggles the pause state for all sounds.
+## Toggle pause state for all sounds.
 func toggle_all_sounds() -> void:
 	var state := _get_combined_pause_state([
 		_sound_stream_players,
@@ -690,12 +742,11 @@ func toggle_all_sounds() -> void:
 	elif state.any_paused and not state.any_playing:
 		resume_all_sounds()
 
-
 # ============================================================================
 # PAUSE / RESUME — MUSIC
 # ============================================================================
 
-## Pauses the given music player.
+## Pause a specific music player.
 func pause_music(stream_player: AudioStreamPlayer) -> bool:
 	if not is_instance_valid(stream_player):
 		return false
@@ -706,8 +757,7 @@ func pause_music(stream_player: AudioStreamPlayer) -> bool:
 
 	return false
 
-
-## Resumes the given music player.
+## Resume a paused music player.
 func resume_music(stream_player: AudioStreamPlayer) -> bool:
 	if not is_instance_valid(stream_player):
 		return false
@@ -718,8 +768,7 @@ func resume_music(stream_player: AudioStreamPlayer) -> bool:
 
 	return false
 
-
-## Toggles the pause state of the given music player.
+## Toggle pause state of a music player.
 func toggle_music_pause(stream_player: AudioStreamPlayer) -> bool:
 	if not is_instance_valid(stream_player):
 		return false
@@ -731,22 +780,19 @@ func toggle_music_pause(stream_player: AudioStreamPlayer) -> bool:
 
 	return false
 
-
-## Pauses all currently playing music.
+## Pause all music players.
 func pause_all_music() -> void:
 	for player in _music_stream_players.values():
 		if is_instance_valid(player) and player.playing and not player.stream_paused:
 			player.stream_paused = true
 
-
-## Resumes all paused music.
+## Resume all music players.
 func resume_all_music() -> void:
 	for player in _music_stream_players.values():
 		if is_instance_valid(player) and player.stream_paused:
 			player.stream_paused = false
 
-
-## Toggles the pause state for all music.
+## Toggle pause state for all music.
 func toggle_all_music() -> void:
 	var state := _get_players_pause_state(_music_stream_players)
 
@@ -755,24 +801,21 @@ func toggle_all_music() -> void:
 	elif state.any_paused and not state.any_playing:
 		resume_all_music()
 
-
 # ============================================================================
-# GLOBAL PAUSE / RESUME (SOUNDS + MUSIC)
+# GLOBAL PAUSE / RESUME
 # ============================================================================
 
-## Pauses all sounds and music — useful for a game pause menu.
+## Pause all audio (sounds + music) — useful for game pause menu.
 func pause_all_audio() -> void:
 	pause_all_sounds()
 	pause_all_music()
 
-
-## Resumes all sounds and music.
+## Resume all audio.
 func resume_all_audio() -> void:
 	resume_all_sounds()
 	resume_all_music()
 
-
-## Toggles the pause state for all audio (sounds + music).
+## Toggle pause state for all audio.
 func toggle_all_audio() -> void:
 	var state := _get_combined_pause_state([
 		_sound_stream_players,
@@ -786,30 +829,25 @@ func toggle_all_audio() -> void:
 	elif state.any_paused and not state.any_playing:
 		resume_all_audio()
 
-
 # ============================================================================
-# INTERNAL — STOPPING
+# INTERNAL — STOPPING HELPERS
 # ============================================================================
 
 func _stop_sound_stream_player(stream_player: AudioStreamPlayer) -> void:
 	stream_player.stop()
 	_on_sound_stream_player_finished(stream_player)
 
-
 func _stop_sound_2d_stream_player(stream_player: AudioStreamPlayer2D) -> void:
 	stream_player.stop()
 	_on_sound_2d_stream_player_finished(stream_player)
-
 
 func _stop_sound_3d_stream_player(stream_player: AudioStreamPlayer3D) -> void:
 	stream_player.stop()
 	_on_sound_3d_stream_player_finished(stream_player)
 
-
 func _stop_music_stream_player(stream_player: AudioStreamPlayer) -> void:
 	stream_player.stop()
 	_on_music_stream_player_finished(stream_player)
-
 
 # ============================================================================
 # INTERNAL — AUDIO BUS CONFIGURATION
@@ -821,7 +859,6 @@ func _update_audio_bus_from_file_path() -> void:
 	else:
 		_audio_bus_layout = null
 
-
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings: PackedStringArray = []
 	if not _check_audio_bus_layout_existence():
@@ -831,13 +868,11 @@ func _get_configuration_warnings() -> PackedStringArray:
 			% [MUSIC_BUS_NAME, SOUND_BUS_NAME])
 	return warnings
 
-
 func _check_audio_bus_layout_existence() -> bool:
 	if audio_bus_default_file_path.is_empty():
 		return false
 	_update_audio_bus_from_file_path()
 	return _audio_bus_layout != null
-
 
 func _check_audio_bus_layout_validity() -> bool:
 	var buses: PackedStringArray = []
@@ -846,7 +881,6 @@ func _check_audio_bus_layout_validity() -> bool:
 		buses.append(_audio_bus_layout.get("bus/%s/name" % i))
 		i += 1
 	return buses.has(MUSIC_BUS_NAME) and buses.has(SOUND_BUS_NAME)
-
 
 # ============================================================================
 # INTERNAL — CHANNEL MANAGEMENT
@@ -880,7 +914,6 @@ func _update_music_channels(count: int) -> void:
 				_music_stream_players.erase(sp.get_instance_id())
 				sp.queue_free()
 
-
 func _update_sound_channels(count: int) -> void:
 	if count < 0:
 		return
@@ -909,7 +942,6 @@ func _update_sound_channels(count: int) -> void:
 				_sound_stream_players.erase(sp_id)
 				_sound_stream_players_priorities.erase(sp_id)
 				sp.queue_free()
-
 
 func _update_sound_2d_channels(count: int) -> void:
 	if count < 0:
@@ -941,7 +973,6 @@ func _update_sound_2d_channels(count: int) -> void:
 				_sound_2d_stream_players_priorities.erase(sp_id)
 				sp.queue_free()
 
-
 func _update_sound_3d_channels(count: int) -> void:
 	if count < 0:
 		return
@@ -972,30 +1003,26 @@ func _update_sound_3d_channels(count: int) -> void:
 				_sound_3d_stream_players_priorities.erase(sp_id)
 				sp.queue_free()
 
-
+# Polyphony update methods (called when export values change)
 func _update_sound_polyphony() -> void:
 	for sp in _sound_stream_players.values():
 		if is_instance_valid(sp):
 			sp.max_polyphony = sound_polyphony
-
 
 func _update_sound_2d_polyphony() -> void:
 	for sp in _sound_2d_stream_players.values():
 		if is_instance_valid(sp):
 			sp.max_polyphony = sound_2d_polyphony
 
-
 func _update_sound_3d_polyphony() -> void:
 	for sp in _sound_3d_stream_players.values():
 		if is_instance_valid(sp):
 			sp.max_polyphony = sound_3d_polyphony
 
-
 func _update_music_polyphony() -> void:
 	for sp in _music_stream_players.values():
 		if is_instance_valid(sp):
 			sp.max_polyphony = music_polyphony
-
 
 # ============================================================================
 # INTERNAL — FILE AND LOADING
@@ -1004,20 +1031,16 @@ func _update_music_polyphony() -> void:
 func _update_music_filenames(p_music_dir_path: String) -> void:
 	_music_filenames = _get_filenames(p_music_dir_path)
 
-
 func _update_sound_filenames(p_sound_dir_path: String) -> void:
 	_sound_filenames = _get_filenames(p_sound_dir_path)
-
 
 func _update_sound_process_mode(p_process_mode: ProcessMode) -> void:
 	sound_root.process_mode = p_process_mode
 	sound_2d_root.process_mode = p_process_mode
 	sound_3d_root.process_mode = p_process_mode
 
-
 func _update_music_process_mode(p_process_mode: ProcessMode) -> void:
 	music_root.process_mode = p_process_mode
-
 
 func _get_filenames(dir_path: String) -> Array[String]:
 	var files: Array[String] = []
@@ -1034,7 +1057,6 @@ func _get_filenames(dir_path: String) -> Array[String]:
 	else:
 		push_error("An error occurred when trying to access '" + dir_path + "'.")
 	return files
-
 
 func _load_from_files(audio_type: AudioType, audio_names: Array[String]) -> Dictionary[String, AudioStream]:
 	var loaded: Dictionary[String, AudioStream] = {}
@@ -1053,7 +1075,6 @@ func _load_from_files(audio_type: AudioType, audio_names: Array[String]) -> Dict
 
 	return loaded
 
-
 func _get_filename(audio_type: AudioType, audio_name: String) -> String:
 	var files: Array[String] = _sound_filenames if audio_type == AudioType.SOUND else _music_filenames
 
@@ -1067,7 +1088,6 @@ func _get_filename(audio_type: AudioType, audio_name: String) -> String:
 			return available_file_name
 
 	return ""
-
 
 # ============================================================================
 # INTERNAL — POOL AND PRIORITIES
@@ -1105,7 +1125,6 @@ func _remove_connection_tree_exiting(stream_player: Node) -> bool:
 
 	return removed
 
-
 func _remove_tween_volume_transition(stream_player: Node) -> void:
 	if not is_instance_valid(stream_player):
 		return
@@ -1117,7 +1136,7 @@ func _remove_tween_volume_transition(stream_player: Node) -> void:
 			tween.kill()
 		_stream_players_tween_volume_transition.erase(sp_id)
 
-
+## Finds the oldest (longest playing) player from the given dictionary.
 func _find_oldest(stream_players: Dictionary) -> Node:
 	var oldest: Node = null
 
@@ -1130,7 +1149,7 @@ func _find_oldest(stream_players: Dictionary) -> Node:
 
 	return oldest
 
-
+## Finds the oldest player that meets the priority criteria.
 func _check_priority_and_find_oldest(stream_players: Dictionary, priorities: Dictionary[int, int], priority: int) -> Node:
 	var oldest: Node = null
 	var max_pos: float = -1.0
@@ -1146,7 +1165,7 @@ func _check_priority_and_find_oldest(stream_players: Dictionary, priorities: Dic
 
 	return oldest
 
-
+## Returns the player dictionary for the given sound type.
 func _get_players_by_sound_type(sound_type: SoundType) -> Dictionary:
 	match sound_type:
 		SoundType.NON_POSITIONAL:
@@ -1159,7 +1178,7 @@ func _get_players_by_sound_type(sound_type: SoundType) -> Dictionary:
 			push_error("Unknown sound type: ", sound_type)
 			return {}
 
-
+## Returns the priority dictionary for the given sound type.
 func _get_priorities_by_sound_type(sound_type: SoundType) -> Dictionary:
 	match sound_type:
 		SoundType.NON_POSITIONAL:
@@ -1172,18 +1191,18 @@ func _get_priorities_by_sound_type(sound_type: SoundType) -> Dictionary:
 			push_error("Unknown sound type: ", sound_type)
 			return {}
 
-
+## Returns loaded sound stream by name, or null if not found.
 func _get_loaded_sound(stream_name: String) -> AudioStream:
 	if not _loaded_sound_streams.has(stream_name):
 		push_error("No loaded sound stream found with name: " + stream_name)
 		return null
 	return _loaded_sound_streams[stream_name]
 
-
+## Checks if a player is currently playing the target stream.
 func _is_player_playing_sound(player: Node, target_stream: AudioStream) -> bool:
 	return is_instance_valid(player) and player.playing and player.stream == target_stream
 
-
+## Returns pause state (any_playing, any_paused) for a single player dictionary.
 func _get_players_pause_state(players: Dictionary) -> Dictionary:
 	var any_playing := false
 	var any_paused := false
@@ -1195,12 +1214,11 @@ func _get_players_pause_state(players: Dictionary) -> Dictionary:
 			elif player.stream_paused:
 				any_paused = true
 			if any_playing and any_paused:
-				break  # early exit — both flags known
+				break
 
 	return { "any_playing": any_playing, "any_paused": any_paused }
 
-
-## Takes an array of dictionaries (e.g., [_sound_stream_players, _music_stream_players]).
+## Returns combined pause state for multiple player dictionaries.
 func _get_combined_pause_state(player_dicts: Array) -> Dictionary:
 	var any_playing := false
 	var any_paused := false
@@ -1216,9 +1234,8 @@ func _get_combined_pause_state(player_dicts: Array) -> Dictionary:
 
 	return { "any_playing": any_playing, "any_paused": any_paused }
 
-
 # ============================================================================
-# CALLBACKS — PLAYBACK FINISHED AND TREE EXITING
+# CALLBACKS
 # ============================================================================
 
 func _on_playing_node_with_sound_2d_stream_players_exiting_tree(node: Node) -> void:
@@ -1231,7 +1248,6 @@ func _on_playing_node_with_sound_2d_stream_players_exiting_tree(node: Node) -> v
 		while arr.size() > 0:
 			_stop_sound_2d_stream_player(arr[0])
 
-
 func _on_playing_node_with_sound_3d_stream_players_exiting_tree(node: Node) -> void:
 	if not is_instance_valid(node):
 		return
@@ -1242,12 +1258,10 @@ func _on_playing_node_with_sound_3d_stream_players_exiting_tree(node: Node) -> v
 		while arr.size() > 0:
 			_stop_sound_3d_stream_player(arr[0])
 
-
 func _on_sound_stream_player_finished(stream_player: AudioStreamPlayer) -> void:
 	if stream_player:
 		_sound_stream_players_priorities.erase(stream_player.get_instance_id())
 		_available_sound_stream_players.append(stream_player)
-
 
 func _on_sound_2d_stream_player_finished(stream_player: AudioStreamPlayer2D) -> void:
 	if stream_player:
@@ -1257,7 +1271,6 @@ func _on_sound_2d_stream_player_finished(stream_player: AudioStreamPlayer2D) -> 
 		_sound_2d_stream_players_priorities.erase(stream_player.get_instance_id())
 		_available_sound_2d_stream_players.append(stream_player)
 
-
 func _on_sound_3d_stream_player_finished(stream_player: AudioStreamPlayer3D) -> void:
 	if stream_player:
 		_remove_connection_tree_exiting(stream_player)
@@ -1265,7 +1278,6 @@ func _on_sound_3d_stream_player_finished(stream_player: AudioStreamPlayer3D) -> 
 		sound_3d_root.add_child(stream_player)
 		_sound_3d_stream_players_priorities.erase(stream_player.get_instance_id())
 		_available_sound_3d_stream_players.append(stream_player)
-
 
 func _on_music_stream_player_finished(stream_player: AudioStreamPlayer) -> void:
 	if stream_player:
