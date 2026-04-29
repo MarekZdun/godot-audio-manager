@@ -1,7 +1,9 @@
 @tool
 extends Node
 
-## Audio Manager - efficient pooling and playback system for sounds and music.
+## ============================================================================
+## AUDIO MANAGER v2.0
+## ============================================================================
 ##
 ## This manager maintains pools of AudioStreamPlayers for different audio types:
 ## - NON_POSITIONAL: Standard 2D sounds (UI, global effects)
