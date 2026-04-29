@@ -17,11 +17,15 @@ extends Node
 ## - Pause/resume for all audio or specific types
 ## - Playback state queries (is_playing, is_paused, is_sound_playing)
 ## - Priority-based batch stopping
+## - Signals for sound/music completion
 ##
 ## Usage example:
 ## @gdscript
 ## # Play a sound
 ## var player = audio_manager.play_loaded_sound("explosion", SoundType.POSITIONAL_2D, get_parent())
+##
+## # Connect to completion signal
+## audio_manager.any_sound_finished.connect(_on_sound_finished)
 ##
 ## # Check if playing
 ## if audio_manager.is_playing(player):
@@ -41,6 +45,18 @@ enum SoundType {
 	POSITIONAL_2D,    ## 2D positional sound (attaches to parent)
 	POSITIONAL_3D     ## 3D positional sound (attaches to parent)
 }
+
+# ============================================================================
+# SIGNALS
+# ============================================================================
+
+## Emitted when any sound finishes playing.
+## Returns the player, sound type, and stream name (if loaded from files).
+signal any_sound_finished(stream_player: Node, sound_type: SoundType, stream_name: String)
+
+## Emitted when any music finishes playing.
+## Returns the player and stream name (if loaded from files).
+signal any_music_finished(stream_player: AudioStreamPlayer, stream_name: String)
 
 # ============================================================================
 # CONSTANTS
@@ -1202,6 +1218,16 @@ func _get_loaded_sound(stream_name: String) -> AudioStream:
 func _is_player_playing_sound(player: Node, target_stream: AudioStream) -> bool:
 	return is_instance_valid(player) and player.playing and player.stream == target_stream
 
+## Returns the stream name for a given AudioStream (if loaded from files).
+func _get_stream_name(stream: AudioStream) -> String:
+	for name in _loaded_sound_streams:
+		if _loaded_sound_streams[name] == stream:
+			return name
+	for name in _loaded_music_streams:
+		if _loaded_music_streams[name] == stream:
+			return name
+	return ""
+
 ## Returns pause state (any_playing, any_paused) for a single player dictionary.
 func _get_players_pause_state(players: Dictionary) -> Dictionary:
 	var any_playing := false
@@ -1260,11 +1286,15 @@ func _on_playing_node_with_sound_3d_stream_players_exiting_tree(node: Node) -> v
 
 func _on_sound_stream_player_finished(stream_player: AudioStreamPlayer) -> void:
 	if stream_player:
+		var stream_name := _get_stream_name(stream_player.stream)
+		any_sound_finished.emit(stream_player, SoundType.NON_POSITIONAL, stream_name)
 		_sound_stream_players_priorities.erase(stream_player.get_instance_id())
 		_available_sound_stream_players.append(stream_player)
 
 func _on_sound_2d_stream_player_finished(stream_player: AudioStreamPlayer2D) -> void:
 	if stream_player:
+		var stream_name := _get_stream_name(stream_player.stream)
+		any_sound_finished.emit(stream_player, SoundType.POSITIONAL_2D, stream_name)
 		_remove_connection_tree_exiting(stream_player)
 		stream_player.get_parent().remove_child(stream_player)
 		sound_2d_root.add_child(stream_player)
@@ -1273,6 +1303,8 @@ func _on_sound_2d_stream_player_finished(stream_player: AudioStreamPlayer2D) -> 
 
 func _on_sound_3d_stream_player_finished(stream_player: AudioStreamPlayer3D) -> void:
 	if stream_player:
+		var stream_name := _get_stream_name(stream_player.stream)
+		any_sound_finished.emit(stream_player, SoundType.POSITIONAL_3D, stream_name)
 		_remove_connection_tree_exiting(stream_player)
 		stream_player.get_parent().remove_child(stream_player)
 		sound_3d_root.add_child(stream_player)
@@ -1281,4 +1313,6 @@ func _on_sound_3d_stream_player_finished(stream_player: AudioStreamPlayer3D) -> 
 
 func _on_music_stream_player_finished(stream_player: AudioStreamPlayer) -> void:
 	if stream_player:
+		var stream_name := _get_stream_name(stream_player.stream)
+		any_music_finished.emit(stream_player, stream_name)
 		_available_music_stream_players.append(stream_player)
