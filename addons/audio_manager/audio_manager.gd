@@ -563,8 +563,9 @@ func stop_sounds_by_priority_range(sound_type: SoundType, min_priority: int, max
 # ============================================================================
 
 ## Stop a specific music player (with optional fade-out).
+## ASYNC - use 'await' to wait for fade-out to complete.
 func stop_music(stream_player: AudioStreamPlayer,
-		volume_transition_out_duration: float = DEFAULT_VOLUME_FADE_OUT_DURATION) -> void:
+		volume_transition_out_duration: float = DEFAULT_VOLUME_FADE_OUT_DURATION):
 	if not is_instance_valid(stream_player):
 		return
 
