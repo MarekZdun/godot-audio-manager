@@ -45,8 +45,8 @@ This manager maintains pools of AudioStreamPlayers for different audio types:
 2. Load audio files:
   - Use auto-discovery by setting directories, or load manually:
 ```gdscript
-    AudioManager.load_sounds(["explosion", "footstep", "laser"])
-    AudioManager.load_music(["battle_theme", "menu_theme"])
+	AudioManager.load_sounds(["explosion", "footstep", "laser"])
+	AudioManager.load_music(["battle_theme", "menu_theme"])
 ```
 3. Play sounds:
 ```gdscript
@@ -86,28 +86,28 @@ This manager maintains pools of AudioStreamPlayers for different audio types:
 7. Check playback state:
 ```gdscript
   if AudioManager.is_playing(player):
-      print("Sound is playing")
+	  print("Sound is playing")
   if AudioManager.is_sound_playing("explosion", SoundType.POSITIONAL_3D):
-      print("Explosion already playing - skipping to avoid overlap")
+	  print("Explosion already playing - skipping to avoid overlap")
 ```
 8. Connect to signals:
 ```gdscript
   AudioManager.any_sound_finished.connect(_on_sound_finished)
   AudioManager.any_music_finished.connect(_on_music_finished)
   func _on_sound_finished(player, sound_type, sound_name):
-      print("Sound finished:", sound_name)
-      if sound_name == "footstep":
-          play_next_footstep()
+	  print("Sound finished:", sound_name)
+	  if sound_name == "footstep":
+		  play_next_footstep()
   func _on_music_finished(player, music_name):
-      print("Music finished:", music_name)
-      AudioManager.play_loaded_music("next_track")
+	  print("Music finished:", music_name)
+	  AudioManager.play_loaded_music("next_track")
 ```
 9. Optimize with polyphony (v2.0 feature):
 ```gdscript
   # Set sound_2d_polyphony = 5 in Inspector
   # Enemy shoots 10 times rapidly - same player reused for all shots!
   for i in range(10):
-      AudioManager.play_loaded_sound("laser", SoundType.POSITIONAL_2D, enemy)
+	  AudioManager.play_loaded_sound("laser", SoundType.POSITIONAL_2D, enemy)
 ```
 10. Unload audio (free memory):
 ```gdscript

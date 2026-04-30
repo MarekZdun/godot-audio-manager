@@ -265,6 +265,14 @@ func unload_sound(audio_name: String) -> void:
 func unload_music(audio_name: String) -> void:
 	if not _loaded_music_streams.erase(audio_name):
 		push_error("No loaded music stream found with name: " + audio_name)
+		
+## Returns true if a sound with the given name is loaded.
+func is_sound_loaded(stream_name: String) -> bool:
+	return _loaded_sound_streams.has(stream_name)
+
+## Returns true if music with the given name is loaded.
+func is_music_loaded(stream_name: String) -> bool:
+	return _loaded_music_streams.has(stream_name)
 
 # ============================================================================
 # SOUND PLAYBACK

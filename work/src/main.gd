@@ -70,13 +70,16 @@ func _input(event: InputEvent):
 	if event is InputEventKey and !event.is_echo():
 		if event.pressed:
 			if !event.shift_pressed and event.keycode == KEY_1:
-				_sound_stream_player_1 = AudioManager.play_loaded_sound("blip", AudioManager.SoundType.NON_POSITIONAL)
+				if AudioManager.is_sound_loaded("blip"):
+					_sound_stream_player_1 = AudioManager.play_loaded_sound("blip", AudioManager.SoundType.NON_POSITIONAL)
 
 			elif !event.shift_pressed and event.keycode == KEY_2:
-				_sound_stream_player_2 = AudioManager.play_loaded_sound("confirmation", AudioManager.SoundType.NON_POSITIONAL)
+				if AudioManager.is_sound_loaded("confirmation"):
+					_sound_stream_player_2 = AudioManager.play_loaded_sound("confirmation", AudioManager.SoundType.NON_POSITIONAL)
 
 			elif !event.shift_pressed and event.keycode == KEY_3:
-				_sound_stream_player_3 = AudioManager.play_loaded_sound("laser", AudioManager.SoundType.NON_POSITIONAL)
+				if AudioManager.is_sound_loaded("laser"):
+					_sound_stream_player_3 = AudioManager.play_loaded_sound("laser", AudioManager.SoundType.NON_POSITIONAL)
 				
 			elif event.shift_pressed and event.keycode == KEY_1:
 				AudioManager.stop_sound(_sound_stream_player_1)
